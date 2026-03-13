@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PrintHub.Api/PrintHub.Api.csproj" />
+    <Project Path="src/PrintHub.Contracts/PrintHub.Contracts.csproj" />
+    <Project Path="src/PrintHub.Core/PrintHub.Core.csproj" />
+  </Folder>
+</Solution>
