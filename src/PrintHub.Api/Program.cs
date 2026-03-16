@@ -4,12 +4,15 @@ using PrintHub.Api.Configuration;
 using PrintHub.Api.Requests;
 using PrintHub.Contracts.Diagnostics;
 using PrintHub.Contracts.Printers;
+using PrintHub.Contracts.Settings;
 using PrintHub.Core.Backends;
 using PrintHub.Core.Models;
 using PrintHub.Core.Queues;
 using PrintHub.Core.Repositories;
+using PrintHub.Core.Settings;
 using PrintHub.Core.Services;
 using PrintHub.Infrastructure.Backends;
+using PrintHub.Infrastructure.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
@@ -30,6 +33,26 @@ builder.Services.AddSingleton<IPrintJobQueue, InMemoryPrintJobQueue>();
 builder.Services.AddSingleton<IPrintJobStore, InMemoryPrintJobStore>();
 builder.Services.AddSingleton<IPrintJobService, PrintJobService>();
 builder.Services.AddSingleton<IPrintBackend, MockPrintBackend>();
+builder.Services.AddSingleton<IPrintHubSettingsStore>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
+    return new JsonPrintHubSettingsStore(AppContext.BaseDirectory, options.SettingsFilePath);
+});
+builder.Services.AddSingleton<IPrintHubSettingsService>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
+    var defaults = PrintHubSettings.CreateDefaults(
+        options.ServiceName,
+        options.Port,
+        options.ApiKeyHeaderName,
+        options.ApiKey,
+        options.StorageDirectory,
+        options.MaxUploadSizeBytes);
+
+    return new PrintHubSettingsService(
+        serviceProvider.GetRequiredService<IPrintHubSettingsStore>(),
+        defaults);
+});
 builder.Services.AddHostedService<PrintJobWorker>();
 
 var app = builder.Build();
@@ -41,13 +64,48 @@ if (app.Environment.IsDevelopment())
 
 var protectedApi = app.MapGroup(string.Empty)
     .AddEndpointFilter<ApiKeyEndpointFilter>();
+var settingsApi = app.MapGroup("/settings")
+    .AddEndpointFilter<ApiKeyEndpointFilter>();
 
-app.MapGet("/health", (TimeProvider timeProvider, IOptions<PrintHubApiOptions> options) =>
-    TypedResults.Ok(new HealthResponse(
+app.MapGet("/health", async (TimeProvider timeProvider, IPrintHubSettingsService settingsService, CancellationToken cancellationToken) =>
+{
+    var settings = await settingsService.GetAsync(cancellationToken);
+
+    return TypedResults.Ok(new HealthResponse(
         Status: "healthy",
-        Service: options.Value.ServiceName,
-        Timestamp: timeProvider.GetUtcNow())))
+        Service: settings.ServiceName,
+        Timestamp: timeProvider.GetUtcNow()));
+})
     .WithName("GetHealth");
+
+settingsApi.MapGet(string.Empty, async (IPrintHubSettingsService settingsService, CancellationToken cancellationToken) =>
+{
+    var settings = await settingsService.GetAsync(cancellationToken);
+    return TypedResults.Ok(ToSettingsDto(settings));
+})
+    .WithName("GetSettings");
+
+settingsApi.MapPut(string.Empty, async Task<IResult> (
+    UpdatePrintHubSettingsRequest request,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var updatedSettings = await settingsService.UpdateAsync(request, cancellationToken);
+        return TypedResults.Ok(ToSettingsDto(updatedSettings));
+    }
+    catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+    {
+        return TypedResults.BadRequest(new ProblemDetails
+        {
+            Title = "Invalid settings request",
+            Detail = exception.Message,
+            Status = StatusCodes.Status400BadRequest
+        });
+    }
+})
+    .WithName("UpdateSettings");
 
 protectedApi.MapGet("/printers", async (IPrintBackend backend, CancellationToken cancellationToken) =>
 {
@@ -59,12 +117,12 @@ protectedApi.MapGet("/printers", async (IPrintBackend backend, CancellationToken
 protectedApi.MapPost("/print-jobs", async Task<IResult> (
     HttpRequest request,
     IPrintJobService printJobService,
-    IOptions<PrintHubApiOptions> options,
+    IPrintHubSettingsService settingsService,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var createRequest = await PrintJobRequestParser.ParseAsync(request, options, cancellationToken);
+        var createRequest = await PrintJobRequestParser.ParseAsync(request, settingsService, cancellationToken);
         var createdJob = await printJobService.CreateAsync(createRequest, cancellationToken);
 
         return TypedResults.Created($"/print-jobs/{createdJob.JobId}", createdJob);
@@ -97,3 +155,12 @@ app.Run();
 
 static PrinterDto ToDto(PrinterInfo printer) =>
     new(printer.Id, printer.Name, printer.IsDefault, printer.Status);
+
+static PrintHubSettingsDto ToSettingsDto(PrintHubSettings settings) =>
+    new(
+        settings.ServiceName,
+        settings.Port,
+        settings.ApiKeyHeaderName,
+        settings.ApiKey,
+        settings.StorageDirectory,
+        settings.MaxUploadSizeBytes);

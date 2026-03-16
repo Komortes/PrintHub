@@ -1,19 +1,19 @@
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using PrintHub.Api.Configuration;
+using PrintHub.Core.Settings;
 
 namespace PrintHub.Api.Auth;
 
 public sealed class ApiKeyEndpointFilter : IEndpointFilter
 {
-    private readonly IOptions<PrintHubApiOptions> _options;
+    private readonly IPrintHubSettingsService _settingsService;
     private readonly ILogger<ApiKeyEndpointFilter> _logger;
 
     public ApiKeyEndpointFilter(
-        IOptions<PrintHubApiOptions> options,
+        IPrintHubSettingsService settingsService,
         ILogger<ApiKeyEndpointFilter> logger)
     {
-        _options = options;
+        _settingsService = settingsService;
         _logger = logger;
     }
 
@@ -21,21 +21,26 @@ public sealed class ApiKeyEndpointFilter : IEndpointFilter
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next)
     {
-        var settings = _options.Value;
+        var settings = await _settingsService.GetAsync(context.HttpContext.RequestAborted);
+        var request = context.HttpContext.Request;
 
         if (string.IsNullOrWhiteSpace(settings.ApiKey))
         {
+            if (request.Path.StartsWithSegments("/settings") && IsLocalRequest(context.HttpContext))
+            {
+                return await next(context);
+            }
+
             _logger.LogError("API key is not configured. Protected endpoints are unavailable.");
 
             return TypedResults.Problem(new ProblemDetails
             {
                 Title = "API key is not configured",
-                Detail = "Set PrintHub:ApiKey in configuration before calling protected endpoints.",
+                Detail = "Configure an API key via /settings from localhost before calling protected endpoints.",
                 Status = StatusCodes.Status503ServiceUnavailable
             });
         }
 
-        var request = context.HttpContext.Request;
         var providedApiKey = request.Headers[settings.ApiKeyHeaderName].ToString();
 
         if (string.IsNullOrWhiteSpace(providedApiKey) ||
@@ -46,4 +51,8 @@ public sealed class ApiKeyEndpointFilter : IEndpointFilter
 
         return await next(context);
     }
+
+    private static bool IsLocalRequest(HttpContext httpContext) =>
+        httpContext.Connection.RemoteIpAddress is null ||
+        IPAddress.IsLoopback(httpContext.Connection.RemoteIpAddress);
 }

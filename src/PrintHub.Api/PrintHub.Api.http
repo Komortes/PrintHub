@@ -7,6 +7,28 @@ Accept: application/json
 
 ###
 
+GET {{PrintHub.Api_HostAddress}}/settings
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+PUT {{PrintHub.Api_HostAddress}}/settings
+Content-Type: application/json
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+{
+  "serviceName": "PrintHub",
+  "port": 5051,
+  "apiKeyHeaderName": "X-PrintHub-Api-Key",
+  "apiKey": "dev-local-api-key",
+  "storageDirectory": "data/documents",
+  "maxUploadSizeBytes": 10485760
+}
+
+###
+
 GET {{PrintHub.Api_HostAddress}}/printers
 Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}

@@ -1,8 +1,8 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.Options;
 using PrintHub.Api.Configuration;
 using PrintHub.Contracts.PrintJobs;
+using PrintHub.Core.Settings;
 
 namespace PrintHub.Api.Requests;
 
@@ -10,26 +10,28 @@ public static class PrintJobRequestParser
 {
     public static void ConfigureFormOptions(IServiceCollection services, IConfiguration configuration)
     {
-        var maxUploadSizeBytes = configuration.GetValue<long?>($"{PrintHubApiOptions.SectionName}:MaxUploadSizeBytes")
-            ?? PrintHubApiOptions.DefaultMaxUploadSizeBytes;
+        var maxMultipartBodySizeBytes = configuration.GetValue<long?>($"{PrintHubApiOptions.SectionName}:MaxMultipartBodySizeBytes")
+            ?? PrintHubApiOptions.DefaultMaxMultipartBodySizeBytes;
 
         services.Configure<FormOptions>(options =>
         {
-            options.MultipartBodyLengthLimit = maxUploadSizeBytes;
+            options.MultipartBodyLengthLimit = maxMultipartBodySizeBytes;
         });
     }
 
     public static async ValueTask<CreatePrintJobRequest> ParseAsync(
         HttpRequest request,
-        IOptions<PrintHubApiOptions> options,
+        IPrintHubSettingsService settingsService,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settingsService);
+
+        var settings = await settingsService.GetAsync(cancellationToken);
 
         if (request.HasFormContentType)
         {
-            return await ParseMultipartAsync(request, options.Value, cancellationToken);
+            return await ParseMultipartAsync(request, settings, cancellationToken);
         }
 
         if (IsJsonRequest(request))
@@ -51,7 +53,7 @@ public static class PrintJobRequestParser
 
     private static async ValueTask<CreatePrintJobRequest> ParseMultipartAsync(
         HttpRequest request,
-        PrintHubApiOptions options,
+        PrintHubSettings settings,
         CancellationToken cancellationToken)
     {
         var form = await request.ReadFormAsync(cancellationToken);
@@ -62,10 +64,10 @@ public static class PrintJobRequestParser
             throw new InvalidDataException("Multipart requests require a non-empty 'file' field.");
         }
 
-        if (file.Length > options.MaxUploadSizeBytes)
+        if (file.Length > settings.MaxUploadSizeBytes)
         {
             throw new InvalidDataException(
-                $"Uploaded file exceeds the configured limit of {options.MaxUploadSizeBytes} bytes.");
+                $"Uploaded file exceeds the configured limit of {settings.MaxUploadSizeBytes} bytes.");
         }
 
         if (!IsPdf(file.FileName))
