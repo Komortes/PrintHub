@@ -1,4 +1,5 @@
 @PrintHub.Api_HostAddress = http://localhost:5051
+@ApiKey = dev-local-api-key
 @jobId = replace-me
 
 GET {{PrintHub.Api_HostAddress}}/health
@@ -8,12 +9,14 @@ Accept: application/json
 
 GET {{PrintHub.Api_HostAddress}}/printers
 Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
 
 ###
 
 POST {{PrintHub.Api_HostAddress}}/print-jobs
 Content-Type: application/json
 Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
 
 {
   "printerName": "Office Printer",
@@ -31,5 +34,6 @@ Accept: application/json
 
 GET {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}
 Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
 
 ###

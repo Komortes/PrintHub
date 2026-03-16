@@ -1,4 +1,5 @@
 using PrintHub.Api.Workers;
+using PrintHub.Api.Auth;
 using PrintHub.Api.Configuration;
 using PrintHub.Api.Requests;
 using PrintHub.Contracts.Diagnostics;
@@ -13,7 +14,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
 
 builder.Services.AddOpenApi();
 builder.Services
@@ -34,6 +39,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+var protectedApi = app.MapGroup(string.Empty)
+    .AddEndpointFilter<ApiKeyEndpointFilter>();
+
 app.MapGet("/health", (TimeProvider timeProvider, IOptions<PrintHubApiOptions> options) =>
     TypedResults.Ok(new HealthResponse(
         Status: "healthy",
@@ -41,14 +49,14 @@ app.MapGet("/health", (TimeProvider timeProvider, IOptions<PrintHubApiOptions> o
         Timestamp: timeProvider.GetUtcNow())))
     .WithName("GetHealth");
 
-app.MapGet("/printers", async (IPrintBackend backend, CancellationToken cancellationToken) =>
+protectedApi.MapGet("/printers", async (IPrintBackend backend, CancellationToken cancellationToken) =>
 {
     var printers = await backend.GetPrintersAsync(cancellationToken);
     return TypedResults.Ok(printers.Select(ToDto).ToArray());
 })
     .WithName("GetPrinters");
 
-app.MapPost("/print-jobs", async Task<IResult> (
+protectedApi.MapPost("/print-jobs", async Task<IResult> (
     HttpRequest request,
     IPrintJobService printJobService,
     IOptions<PrintHubApiOptions> options,
@@ -73,7 +81,7 @@ app.MapPost("/print-jobs", async Task<IResult> (
 })
     .WithName("CreatePrintJob");
 
-app.MapGet("/print-jobs/{jobId}", async Task<IResult> (
+protectedApi.MapGet("/print-jobs/{jobId}", async Task<IResult> (
     string jobId,
     IPrintJobService printJobService,
     CancellationToken cancellationToken) =>
