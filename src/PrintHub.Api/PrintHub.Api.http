@@ -1,6 +1,35 @@
 @PrintHub.Api_HostAddress = http://localhost:5051
+@jobId = replace-me
 
-GET {{PrintHub.Api_HostAddress}}/weatherforecast/
+GET {{PrintHub.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/printers
+Accept: application/json
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs
+Content-Type: application/json
+Accept: application/json
+
+{
+  "printerName": "Office Printer",
+  "copies": 1,
+  "document": {
+    "type": 0,
+    "format": 0,
+    "url": "https://example.com/file.pdf",
+    "data": null,
+    "fileName": "file.pdf"
+  }
+}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}
 Accept: application/json
 
 ###

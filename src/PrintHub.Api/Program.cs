@@ -1,13 +1,25 @@
 using PrintHub.Api.Workers;
+using PrintHub.Api.Configuration;
+using PrintHub.Api.Requests;
+using PrintHub.Contracts.Diagnostics;
+using PrintHub.Contracts.Printers;
 using PrintHub.Core.Backends;
+using PrintHub.Core.Models;
 using PrintHub.Core.Queues;
 using PrintHub.Core.Repositories;
 using PrintHub.Core.Services;
 using PrintHub.Infrastructure.Backends;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services
+    .AddOptions<PrintHubApiOptions>()
+    .Bind(builder.Configuration.GetSection(PrintHubApiOptions.SectionName));
+PrintJobRequestParser.ConfigureFormOptions(builder.Services, builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPrintJobQueue, InMemoryPrintJobQueue>();
 builder.Services.AddSingleton<IPrintJobStore, InMemoryPrintJobStore>();
@@ -16,44 +28,64 @@ builder.Services.AddSingleton<IPrintBackend, MockPrintBackend>();
 builder.Services.AddHostedService<PrintJobWorker>();
 
 var app = builder.Build();
-var summaries =
-    new[]
-    {
-        "Freezing",
-        "Bracing",
-        "Chilly",
-        "Cool",
-        "Mild",
-        "Warm",
-        "Balmy",
-        "Hot",
-        "Sweltering",
-        "Scorching"
-    };
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.MapGet("/health", (TimeProvider timeProvider, IOptions<PrintHubApiOptions> options) =>
+    TypedResults.Ok(new HealthResponse(
+        Status: "healthy",
+        Service: options.Value.ServiceName,
+        Timestamp: timeProvider.GetUtcNow())))
+    .WithName("GetHealth");
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/printers", async (IPrintBackend backend, CancellationToken cancellationToken) =>
 {
-    var forecast = Enumerable.Range(1, 5)
-        .Select(index => new WeatherForecast(
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]))
-        .ToArray();
-
-    return forecast;
+    var printers = await backend.GetPrintersAsync(cancellationToken);
+    return TypedResults.Ok(printers.Select(ToDto).ToArray());
 })
-.WithName("GetWeatherForecast");
+    .WithName("GetPrinters");
+
+app.MapPost("/print-jobs", async Task<IResult> (
+    HttpRequest request,
+    IPrintJobService printJobService,
+    IOptions<PrintHubApiOptions> options,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var createRequest = await PrintJobRequestParser.ParseAsync(request, options, cancellationToken);
+        var createdJob = await printJobService.CreateAsync(createRequest, cancellationToken);
+
+        return TypedResults.Created($"/print-jobs/{createdJob.JobId}", createdJob);
+    }
+    catch (Exception exception) when (exception is InvalidOperationException or InvalidDataException or JsonException or ArgumentException)
+    {
+        return TypedResults.BadRequest(new ProblemDetails
+        {
+            Title = "Invalid print job request",
+            Detail = exception.Message,
+            Status = StatusCodes.Status400BadRequest
+        });
+    }
+})
+    .WithName("CreatePrintJob");
+
+app.MapGet("/print-jobs/{jobId}", async Task<IResult> (
+    string jobId,
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var job = await printJobService.GetAsync(jobId, cancellationToken);
+    return job is null
+        ? TypedResults.NotFound()
+        : TypedResults.Ok(job);
+})
+    .WithName("GetPrintJob");
 
 app.Run();
 
-internal sealed record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+static PrinterDto ToDto(PrinterInfo printer) =>
+    new(printer.Id, printer.Name, printer.IsDefault, printer.Status);
