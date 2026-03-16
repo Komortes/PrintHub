@@ -29,6 +29,13 @@ public sealed class MockPrintBackend : IPrintBackend
             throw new InvalidOperationException($"Printer '{printer.Name}' is not ready.");
         }
 
+        if (!File.Exists(job.Document.StoredPath))
+        {
+            throw new FileNotFoundException(
+                $"Prepared document file was not found at '{job.Document.StoredPath}'.",
+                job.Document.StoredPath);
+        }
+
         var simulatedPrintDelay = TimeSpan.FromMilliseconds(500 + (job.Copies * 250));
         await Task.Delay(simulatedPrintDelay, cancellationToken);
     }

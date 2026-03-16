@@ -7,57 +7,71 @@ public sealed class PrintDocument
     private PrintDocument(
         DocumentSourceType sourceType,
         PrintDocumentFormat format,
-        string? url,
-        string? data,
-        string? fileName)
+        string fileName,
+        string storedPath,
+        long sizeBytes,
+        string? sourceUrl)
     {
         SourceType = sourceType;
         Format = format;
-        Url = url;
-        Data = data;
         FileName = fileName;
+        StoredPath = storedPath;
+        SizeBytes = sizeBytes;
+        SourceUrl = sourceUrl;
     }
 
     public DocumentSourceType SourceType { get; }
 
     public PrintDocumentFormat Format { get; }
 
-    public string? Url { get; }
+    public string FileName { get; }
 
-    public string? Data { get; }
+    public string StoredPath { get; }
 
-    public string? FileName { get; }
+    public long SizeBytes { get; }
 
-    public static PrintDocument FromRequest(PrintDocumentRequest request)
+    public string? SourceUrl { get; }
+
+    public static PrintDocument CreateStored(
+        DocumentSourceType sourceType,
+        PrintDocumentFormat format,
+        string fileName,
+        string storedPath,
+        long sizeBytes,
+        string? sourceUrl = null)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        if (!Enum.IsDefined(request.Type))
+        if (!Enum.IsDefined(sourceType))
         {
-            throw new ArgumentOutOfRangeException(nameof(request), "Document source type is not supported.");
+            throw new ArgumentOutOfRangeException(nameof(sourceType), "Document source type is not supported.");
         }
 
-        if (!Enum.IsDefined(request.Format))
+        if (!Enum.IsDefined(format))
         {
-            throw new ArgumentOutOfRangeException(nameof(request), "Document format is not supported.");
+            throw new ArgumentOutOfRangeException(nameof(format), "Document format is not supported.");
         }
 
-        switch (request.Type)
+        if (string.IsNullOrWhiteSpace(fileName))
         {
-            case DocumentSourceType.Url when string.IsNullOrWhiteSpace(request.Url):
-                throw new ArgumentException("Document URL is required for URL source type.", nameof(request));
-            case DocumentSourceType.Base64 when string.IsNullOrWhiteSpace(request.Data):
-                throw new ArgumentException("Base64 document data is required for Base64 source type.", nameof(request));
-            case DocumentSourceType.Upload when string.IsNullOrWhiteSpace(request.Data) && string.IsNullOrWhiteSpace(request.FileName):
-                throw new ArgumentException("Uploaded documents require file data or file name.", nameof(request));
+            throw new ArgumentException("Document file name is required.", nameof(fileName));
+        }
+
+        if (string.IsNullOrWhiteSpace(storedPath))
+        {
+            throw new ArgumentException("Document storage path is required.", nameof(storedPath));
+        }
+
+        if (sizeBytes < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sizeBytes), "Document size must be greater than 0.");
         }
 
         return new PrintDocument(
-            request.Type,
-            request.Format,
-            Normalize(request.Url),
-            Normalize(request.Data),
-            Normalize(request.FileName));
+            sourceType,
+            format,
+            fileName.Trim(),
+            storedPath.Trim(),
+            sizeBytes,
+            Normalize(sourceUrl));
     }
 
     private static string? Normalize(string? value) =>

@@ -6,16 +6,19 @@ using PrintHub.Contracts.Diagnostics;
 using PrintHub.Contracts.Printers;
 using PrintHub.Contracts.Settings;
 using PrintHub.Core.Backends;
+using PrintHub.Core.Documents;
 using PrintHub.Core.Models;
 using PrintHub.Core.Queues;
 using PrintHub.Core.Repositories;
 using PrintHub.Core.Settings;
 using PrintHub.Core.Services;
 using PrintHub.Infrastructure.Backends;
+using PrintHub.Infrastructure.Documents;
 using PrintHub.Infrastructure.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -24,6 +27,10 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+});
 builder.Services
     .AddOptions<PrintHubApiOptions>()
     .Bind(builder.Configuration.GetSection(PrintHubApiOptions.SectionName));
@@ -31,7 +38,6 @@ PrintJobRequestParser.ConfigureFormOptions(builder.Services, builder.Configurati
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPrintJobQueue, InMemoryPrintJobQueue>();
 builder.Services.AddSingleton<IPrintJobStore, InMemoryPrintJobStore>();
-builder.Services.AddSingleton<IPrintJobService, PrintJobService>();
 builder.Services.AddSingleton<IPrintBackend, MockPrintBackend>();
 builder.Services.AddSingleton<IPrintHubSettingsStore>(serviceProvider =>
 {
@@ -53,6 +59,11 @@ builder.Services.AddSingleton<IPrintHubSettingsService>(serviceProvider =>
         serviceProvider.GetRequiredService<IPrintHubSettingsStore>(),
         defaults);
 });
+builder.Services.AddHttpClient<IPrintDocumentPipeline, FileSystemPrintDocumentPipeline>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddSingleton<IPrintJobService, PrintJobService>();
 builder.Services.AddHostedService<PrintJobWorker>();
 
 var app = builder.Build();
@@ -127,7 +138,7 @@ protectedApi.MapPost("/print-jobs", async Task<IResult> (
 
         return TypedResults.Created($"/print-jobs/{createdJob.JobId}", createdJob);
     }
-    catch (Exception exception) when (exception is InvalidOperationException or InvalidDataException or JsonException or ArgumentException)
+    catch (Exception exception) when (exception is InvalidOperationException or InvalidDataException or JsonException or ArgumentException or HttpRequestException)
     {
         return TypedResults.BadRequest(new ProblemDetails
         {

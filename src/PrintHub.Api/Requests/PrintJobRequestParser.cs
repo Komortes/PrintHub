@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Options;
 using PrintHub.Api.Configuration;
 using PrintHub.Contracts.PrintJobs;
 using PrintHub.Core.Settings;
@@ -46,9 +48,23 @@ public static class PrintJobRequestParser
         HttpRequest request,
         CancellationToken cancellationToken)
     {
-        var payload = await request.ReadFromJsonAsync<CreatePrintJobRequest>(cancellationToken: cancellationToken);
+        var serializerOptions = request.HttpContext.RequestServices
+            .GetRequiredService<IOptions<JsonOptions>>()
+            .Value
+            .SerializerOptions;
+        using var document = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken);
+        var payload = document.Deserialize<CreatePrintJobRequest>(serializerOptions);
 
-        return payload ?? throw new InvalidOperationException("Request body is required.");
+        if (payload is null)
+        {
+            throw new InvalidOperationException("Request body is required.");
+        }
+
+        var hasCopies = HasProperty(document.RootElement, "copies");
+
+        return hasCopies
+            ? payload
+            : payload with { Copies = 1 };
     }
 
     private static async ValueTask<CreatePrintJobRequest> ParseMultipartAsync(
@@ -107,4 +123,17 @@ public static class PrintJobRequestParser
     private static bool IsPdf(string? fileName) =>
         !string.IsNullOrWhiteSpace(fileName)
         && fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasProperty(JsonElement element, string propertyName)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
