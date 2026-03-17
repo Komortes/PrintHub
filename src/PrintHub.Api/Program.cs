@@ -74,6 +74,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 var protectedApi = app.MapGroup(string.Empty)
     .AddEndpointFilter<ApiKeyEndpointFilter>();
 var settingsApi = app.MapGroup("/settings")
