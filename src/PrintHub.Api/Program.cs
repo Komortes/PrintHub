@@ -3,6 +3,7 @@ using PrintHub.Api.Auth;
 using PrintHub.Api.Configuration;
 using PrintHub.Api.Requests;
 using PrintHub.Contracts.Diagnostics;
+using PrintHub.Contracts.PrintJobs;
 using PrintHub.Contracts.Printers;
 using PrintHub.Contracts.Settings;
 using PrintHub.Core.Backends;
@@ -149,6 +150,62 @@ protectedApi.MapPost("/print-jobs", async Task<IResult> (
     }
 })
     .WithName("CreatePrintJob");
+
+protectedApi.MapGet("/print-jobs", async Task<IResult> (
+    [FromQuery] string? status,
+    [FromQuery] bool? activeOnly,
+    [FromQuery] int? limit,
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    PrintJobStatus? statusFilter = null;
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        if (!Enum.TryParse<PrintJobStatus>(status, ignoreCase: true, out var parsedStatus))
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title = "Invalid print jobs query",
+                Detail = $"Query parameter 'status' has unsupported value '{status}'.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        statusFilter = parsedStatus;
+    }
+
+    if (limit is <= 0)
+    {
+        return TypedResults.BadRequest(new ProblemDetails
+        {
+            Title = "Invalid print jobs query",
+            Detail = "Query parameter 'limit' must be greater than 0.",
+            Status = StatusCodes.Status400BadRequest
+        });
+    }
+
+    var jobs = await printJobService.ListAsync(cancellationToken);
+    IEnumerable<PrintJobDto> filteredJobs = jobs;
+
+    if (activeOnly == true)
+    {
+        filteredJobs = filteredJobs.Where(job => job.Status is PrintJobStatus.Pending or PrintJobStatus.Processing);
+    }
+
+    if (statusFilter is not null)
+    {
+        filteredJobs = filteredJobs.Where(job => job.Status == statusFilter.Value);
+    }
+
+    if (limit is not null)
+    {
+        filteredJobs = filteredJobs.Take(limit.Value);
+    }
+
+    return TypedResults.Ok(filteredJobs.ToArray());
+})
+    .WithName("ListPrintJobs");
 
 protectedApi.MapGet("/print-jobs/{jobId}", async Task<IResult> (
     string jobId,

@@ -35,6 +35,18 @@ X-PrintHub-Api-Key: {{ApiKey}}
 
 ###
 
+GET {{PrintHub.Api_HostAddress}}/print-jobs
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/print-jobs?activeOnly=true&limit=10
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
 POST {{PrintHub.Api_HostAddress}}/print-jobs
 Content-Type: application/json
 Accept: application/json
@@ -42,10 +54,8 @@ X-PrintHub-Api-Key: {{ApiKey}}
 
 {
   "printerName": "Office Printer",
-  "copies": 1,
   "document": {
-    "type": 0,
-    "format": 0,
+    "type": "url",
     "url": "https://example.com/file.pdf",
     "data": null,
     "fileName": "file.pdf"
