@@ -7,6 +7,7 @@ public sealed record PrintHubSettings(
     int Port,
     string ApiKeyHeaderName,
     string? ApiKey,
+    string? DefaultPrinterName,
     string StorageDirectory,
     long MaxUploadSizeBytes)
 {
@@ -15,6 +16,7 @@ public sealed record PrintHubSettings(
         int port,
         string apiKeyHeaderName,
         string? apiKey,
+        string? defaultPrinterName,
         string storageDirectory,
         long maxUploadSizeBytes) =>
         new(
@@ -22,6 +24,7 @@ public sealed record PrintHubSettings(
             ValidatePort(port),
             NormalizeRequired(apiKeyHeaderName, nameof(apiKeyHeaderName)),
             NormalizeOptional(apiKey),
+            NormalizeOptional(defaultPrinterName),
             NormalizeRequired(storageDirectory, nameof(storageDirectory)),
             ValidateMaxUploadSize(maxUploadSizeBytes));
 
@@ -34,6 +37,7 @@ public sealed record PrintHubSettings(
             ValidatePort(request.Port),
             NormalizeRequired(request.ApiKeyHeaderName, nameof(request.ApiKeyHeaderName)),
             NormalizeRequired(request.ApiKey, nameof(request.ApiKey)),
+            NormalizeOptional(request.DefaultPrinterName),
             NormalizeRequired(request.StorageDirectory, nameof(request.StorageDirectory)),
             ValidateMaxUploadSize(request.MaxUploadSizeBytes));
     }

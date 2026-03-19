@@ -3,6 +3,7 @@ using PrintHub.Core.Documents;
 using PrintHub.Core.Models;
 using PrintHub.Core.Queues;
 using PrintHub.Core.Repositories;
+using PrintHub.Core.Settings;
 
 namespace PrintHub.Core.Services;
 
@@ -10,17 +11,20 @@ public sealed class PrintJobService : IPrintJobService
 {
     private readonly TimeProvider _timeProvider;
     private readonly IPrintDocumentPipeline _documentPipeline;
+    private readonly IPrintHubSettingsService _settingsService;
     private readonly IPrintJobStore _store;
     private readonly IPrintJobQueue _queue;
 
     public PrintJobService(
         TimeProvider timeProvider,
         IPrintDocumentPipeline documentPipeline,
+        IPrintHubSettingsService settingsService,
         IPrintJobStore store,
         IPrintJobQueue queue)
     {
         _timeProvider = timeProvider;
         _documentPipeline = documentPipeline;
+        _settingsService = settingsService;
         _store = store;
         _queue = queue;
     }
@@ -38,9 +42,13 @@ public sealed class PrintJobService : IPrintJobService
 
         var jobId = Guid.NewGuid().ToString("n");
         var document = await _documentPipeline.PrepareAsync(jobId, request.Document, cancellationToken);
+        var settings = await _settingsService.GetAsync(cancellationToken);
+        var printerName = string.IsNullOrWhiteSpace(request.PrinterName)
+            ? settings.DefaultPrinterName
+            : request.PrinterName;
         var job = PrintJob.Create(
             jobId,
-            request.PrinterName,
+            printerName,
             request.Copies,
             document,
             _timeProvider.GetUtcNow());

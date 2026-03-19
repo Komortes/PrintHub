@@ -5,5 +5,6 @@ public sealed record UpdatePrintHubSettingsRequest(
     int Port,
     string ApiKeyHeaderName,
     string? ApiKey,
+    string? DefaultPrinterName,
     string StorageDirectory,
     long MaxUploadSizeBytes);

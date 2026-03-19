@@ -141,6 +141,16 @@
     .btn-sm {
       width: auto; padding: 5px 12px; font-size: 12px; font-weight: 500;
     }
+    .btn-secondary {
+      background: #e8f0fe;
+      color: var(--primary);
+    }
+    .btn-secondary:hover { background: #d7e3fd; }
+    .btn-ghost {
+      background: #f7f7f7;
+      color: var(--text);
+    }
+    .btn-ghost:hover { background: #ececec; }
 
     /* Status badge */
     .badge {
@@ -168,10 +178,19 @@
     .printer-item {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 0; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .printer-item:last-child { border-bottom: none; }
+    .printer-meta { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
     .printer-name { font-weight: 500; }
     .printer-default { font-size: 11px; color: var(--muted); margin-left: auto; }
+    .printer-actions { display: flex; gap: 8px; margin-left: auto; }
+    .settings-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
 
     /* Jobs table */
     .jobs-toolbar {
@@ -237,9 +256,32 @@
           <label>API Ключ</label>
           <input type="text" id="api-key-input" placeholder="Введите API ключ...">
         </div>
+        <div class="settings-note">
+          Ключ хранится локально в этом браузере, чтобы интерфейс мог работать после перезагрузки страницы.
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Имя сервиса</label>
+            <input type="text" id="service-name-input" placeholder="PrintHub">
+          </div>
+          <div class="field">
+            <label>Порт</label>
+            <input type="number" id="port-input" min="1" max="65535" placeholder="5051">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Заголовок API ключа</label>
+            <input type="text" id="api-key-header-input" placeholder="X-PrintHub-Api-Key">
+          </div>
+          <div class="field">
+            <label>Макс. размер файла (байт)</label>
+            <input type="number" id="max-upload-size-input" min="1" placeholder="10485760">
+          </div>
+        </div>
         <div class="field">
-          <label>Имя сервиса</label>
-          <input type="text" id="service-name-input" placeholder="PrintHub">
+          <label>Директория хранения</label>
+          <input type="text" id="storage-directory-input" placeholder="data/documents">
         </div>
         <button class="btn" onclick="saveSettings()">Сохранить</button>
       </div>
@@ -346,14 +388,17 @@
 <div id="toast"></div>
 
 <script>
-  const API_BASE = '';
-  let apiKey = '';
+  const API_KEY_STORAGE_KEY = 'printhub.apiKey';
+  let apiKey = loadStoredApiKey();
+  let currentSettings = null;
+  let printersCache = [];
   let activeTab = 'upload';
   let selectedFile = null;
   let refreshTimer = null;
 
   // ── Init ──────────────────────────────────────────────
   async function init() {
+    document.getElementById('api-key-input').value = apiKey;
     await checkHealth();
     await loadSettings();
     await loadPrinters();
@@ -379,29 +424,45 @@
   // ── Settings ──────────────────────────────────────────
   async function loadSettings() {
     try {
-      const r = await fetch('/settings', { headers: authHeaders() });
-      if (!r.ok) return;
-      const d = await r.json();
-      apiKey = d.apiKey || '';
-      document.getElementById('api-key-input').value = apiKey;
-      document.getElementById('service-name-input').value = d.serviceName || '';
-      if (!apiKey) showBanner(true);
-    } catch {}
+      const r = await fetch('/settings', { headers: authHeaders(resolveRequestApiKey()) });
+      if (!r.ok) {
+        applySettingsToForm(currentSettings || fallbackSettings());
+        showBanner(!apiKey);
+        return;
+      }
+
+      currentSettings = await r.json();
+
+      if (currentSettings.apiKey) {
+        apiKey = currentSettings.apiKey;
+        persistApiKey(apiKey);
+      }
+
+      applySettingsToForm(currentSettings);
+      showBanner(!currentSettings.apiKey);
+    } catch {
+      applySettingsToForm(currentSettings || fallbackSettings());
+    }
   }
 
   async function saveSettings() {
-    const key = document.getElementById('api-key-input').value.trim();
-    const name = document.getElementById('service-name-input').value.trim();
+    const payload = collectSettingsPayload();
+
     try {
       const r = await fetch('/settings', {
         method: 'PUT',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: key || null, serviceName: name || null })
+        headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
+
       if (r.ok) {
-        apiKey = key;
+        currentSettings = await r.json();
+        apiKey = currentSettings.apiKey || '';
+        persistApiKey(apiKey);
+        applySettingsToForm(currentSettings);
         showToast('Настройки сохранены');
         showBanner(!apiKey);
+        await checkHealth();
         await loadPrinters();
         await loadJobs();
       } else {
@@ -437,12 +498,15 @@
     const el = document.getElementById('printers-list');
     const sel = document.getElementById('printer-select');
     try {
-      const r = await fetch('/printers', { headers: authHeaders() });
+      const r = await fetch('/printers', { headers: authHeaders(resolveRequestApiKey()) });
       if (!r.ok) {
+        printersCache = [];
         el.innerHTML = `<div class="empty-state">Нет доступа к принтерам</div>`;
         return;
       }
       const printers = await r.json();
+      printersCache = printers;
+
       if (!printers.length) {
         el.innerHTML = `<div class="empty-state">Принтеры не найдены</div>`;
         return;
@@ -450,18 +514,75 @@
 
       el.innerHTML = printers.map(p => `
         <div class="printer-item">
-          <span class="printer-status ${(p.status||'unknown').toLowerCase()}"></span>
-          <span class="printer-name">${esc(p.name)}</span>
-          ${p.isDefault ? '<span class="printer-default">по умолч.</span>' : ''}
+          <div class="printer-meta">
+            <span class="printer-status ${(p.status||'unknown').toLowerCase()}"></span>
+            <span class="printer-name">${esc(p.name)}</span>
+            ${p.isDefault ? '<span class="printer-default">по умолч.</span>' : ''}
+          </div>
+          <div class="printer-actions">
+            <button
+              class="btn btn-sm ${p.isDefault ? 'btn-ghost' : 'btn-secondary'}"
+              ${p.isDefault ? 'disabled' : ''}
+              onclick="setDefaultPrinter('${escAttr(p.id)}')">${p.isDefault ? 'Основной' : 'Сделать основным'}</button>
+            <button
+              class="btn btn-sm btn-ghost"
+              onclick="testPrinter('${escAttr(p.id)}')">Тест</button>
+          </div>
         </div>
       `).join('');
 
       const prev = sel.value;
       sel.innerHTML = '<option value="">По умолчанию</option>' +
         printers.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
-      if (prev) sel.value = prev;
+      if (prev && printers.some(p => p.name === prev)) {
+        sel.value = prev;
+      } else {
+        sel.value = '';
+      }
     } catch (e) {
+      printersCache = [];
       el.innerHTML = `<div class="empty-state">Ошибка загрузки</div>`;
+    }
+  }
+
+  async function setDefaultPrinter(printerId) {
+    try {
+      const r = await fetch(`/printers/${encodeURIComponent(printerId)}/default`, {
+        method: 'PUT',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (r.ok) {
+        const printer = await r.json();
+        currentSettings = { ...(currentSettings || fallbackSettings()), defaultPrinterName: printer.name };
+        showToast(`Основной принтер: ${printer.name}`);
+        await loadPrinters();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        showToast(d.detail || 'Не удалось сохранить принтер по умолчанию', true);
+      }
+    } catch (e) {
+      showToast('Ошибка: ' + e.message, true);
+    }
+  }
+
+  async function testPrinter(printerId) {
+    try {
+      const r = await fetch(`/printers/${encodeURIComponent(printerId)}/test-print`, {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (r.ok || r.status === 201) {
+        const d = await r.json();
+        showToast(`Тестовая печать отправлена: ${d.jobId.slice(0, 8)}…`);
+        await loadJobs();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        showToast(d.detail || 'Не удалось отправить тестовую печать', true);
+      }
+    } catch (e) {
+      showToast('Ошибка: ' + e.message, true);
     }
   }
 
@@ -472,7 +593,7 @@
     let url = '/print-jobs?limit=100';
     if (status) url += `&status=${status}`;
     try {
-      const r = await fetch(url, { headers: authHeaders() });
+      const r = await fetch(url, { headers: authHeaders(resolveRequestApiKey()) });
       if (!r.ok) {
         container.innerHTML = `<div class="empty-state">Нет доступа к заданиям</div>`;
         return;
@@ -535,7 +656,7 @@
         form.append('file', selectedFile);
         if (printer) form.append('printerName', printer);
         form.append('copies', copies);
-        const r = await fetch('/print-jobs', { method: 'POST', headers: authHeaders(), body: form });
+        const r = await fetch('/print-jobs', { method: 'POST', headers: authHeaders(resolveRequestApiKey()), body: form });
         await handleJobResponse(r);
       } finally { btn.disabled = false; }
 
@@ -546,7 +667,7 @@
       try {
         const r = await fetch('/print-jobs', {
           method: 'POST',
-          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             printerName: printer,
             copies,
@@ -564,7 +685,7 @@
       try {
         const r = await fetch('/print-jobs', {
           method: 'POST',
-          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             printerName: printer,
             copies,
@@ -620,12 +741,73 @@
   }
 
   // ── Utils ─────────────────────────────────────────────
-  function authHeaders() {
-    return apiKey ? { 'X-PrintHub-Api-Key': apiKey } : {};
+  function fallbackSettings() {
+    return {
+      serviceName: 'PrintHub',
+      port: 5051,
+      apiKeyHeaderName: 'X-PrintHub-Api-Key',
+      apiKey: apiKey || null,
+      defaultPrinterName: null,
+      storageDirectory: 'data/documents',
+      maxUploadSizeBytes: 10485760
+    };
+  }
+
+  function applySettingsToForm(settings) {
+    const next = settings || fallbackSettings();
+    document.getElementById('api-key-input').value = apiKey || next.apiKey || '';
+    document.getElementById('service-name-input').value = next.serviceName || '';
+    document.getElementById('port-input').value = next.port || 5051;
+    document.getElementById('api-key-header-input').value = next.apiKeyHeaderName || 'X-PrintHub-Api-Key';
+    document.getElementById('storage-directory-input').value = next.storageDirectory || 'data/documents';
+    document.getElementById('max-upload-size-input').value = next.maxUploadSizeBytes || 10485760;
+  }
+
+  function collectSettingsPayload() {
+    const fallback = currentSettings || fallbackSettings();
+    return {
+      serviceName: document.getElementById('service-name-input').value.trim() || fallback.serviceName,
+      port: parseInt(document.getElementById('port-input').value, 10) || fallback.port,
+      apiKeyHeaderName: document.getElementById('api-key-header-input').value.trim() || fallback.apiKeyHeaderName,
+      apiKey: document.getElementById('api-key-input').value.trim() || null,
+      defaultPrinterName: fallback.defaultPrinterName || null,
+      storageDirectory: document.getElementById('storage-directory-input').value.trim() || fallback.storageDirectory,
+      maxUploadSizeBytes: parseInt(document.getElementById('max-upload-size-input').value, 10) || fallback.maxUploadSizeBytes
+    };
+  }
+
+  function loadStoredApiKey() {
+    try {
+      return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function persistApiKey(value) {
+    try {
+      if (value) {
+        localStorage.setItem(API_KEY_STORAGE_KEY, value);
+      } else {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+      }
+    } catch {}
+  }
+
+  function resolveRequestApiKey() {
+    return apiKey || document.getElementById('api-key-input').value.trim();
+  }
+
+  function authHeaders(apiKeyValue = apiKey) {
+    return apiKeyValue ? { 'X-PrintHub-Api-Key': apiKeyValue } : {};
   }
 
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function escAttr(s) {
+    return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function fmtTime(iso) {

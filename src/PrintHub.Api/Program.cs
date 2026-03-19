@@ -53,6 +53,7 @@ builder.Services.AddSingleton<IPrintHubSettingsService>(serviceProvider =>
         options.Port,
         options.ApiKeyHeaderName,
         options.ApiKey,
+        null,
         options.StorageDirectory,
         options.MaxUploadSizeBytes);
 
@@ -122,12 +123,61 @@ settingsApi.MapPut(string.Empty, async Task<IResult> (
 })
     .WithName("UpdateSettings");
 
-protectedApi.MapGet("/printers", async (IPrintBackend backend, CancellationToken cancellationToken) =>
+protectedApi.MapGet("/printers", async (
+    IPrintBackend backend,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
 {
     var printers = await backend.GetPrintersAsync(cancellationToken);
-    return TypedResults.Ok(printers.Select(ToDto).ToArray());
+    var settings = await settingsService.GetAsync(cancellationToken);
+    return TypedResults.Ok(printers.Select(printer => ToDto(printer, settings.DefaultPrinterName)).ToArray());
 })
     .WithName("GetPrinters");
+
+protectedApi.MapPut("/printers/{printerId}/default", async Task<IResult> (
+    string printerId,
+    IPrintBackend backend,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    var printers = await backend.GetPrintersAsync(cancellationToken);
+    var printer = FindPrinter(printers, printerId);
+
+    if (printer is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    var settings = await settingsService.GetAsync(cancellationToken);
+    var updatedSettings = await settingsService.UpdateAsync(
+        ToUpdateRequest(settings, printer.Name),
+        cancellationToken);
+
+    return TypedResults.Ok(ToDto(printer, updatedSettings.DefaultPrinterName));
+})
+    .WithName("SetDefaultPrinter");
+
+protectedApi.MapPost("/printers/{printerId}/test-print", async Task<IResult> (
+    string printerId,
+    IPrintBackend backend,
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var printers = await backend.GetPrintersAsync(cancellationToken);
+    var printer = FindPrinter(printers, printerId);
+
+    if (printer is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    var createdJob = await printJobService.CreateAsync(
+        CreateTestPrintJobRequest(printer.Name),
+        cancellationToken);
+
+    return TypedResults.Created($"/print-jobs/{createdJob.JobId}", createdJob);
+})
+    .WithName("CreateTestPrintJob");
 
 protectedApi.MapPost("/print-jobs", async Task<IResult> (
     HttpRequest request,
@@ -224,8 +274,14 @@ protectedApi.MapGet("/print-jobs/{jobId}", async Task<IResult> (
 
 app.Run();
 
-static PrinterDto ToDto(PrinterInfo printer) =>
-    new(printer.Id, printer.Name, printer.IsDefault, printer.Status);
+const string TestPrintDocumentBase64 = "JVBERi0xLjQKMSAwIG9iajw8Pj5lbmRvYmoKdHJhaWxlcjw8Pj4KJSVFT0YK";
+
+static PrinterDto ToDto(PrinterInfo printer, string? defaultPrinterName = null) =>
+    new(
+        printer.Id,
+        printer.Name,
+        IsDefaultPrinter(printer, defaultPrinterName),
+        printer.Status);
 
 static PrintHubSettingsDto ToSettingsDto(PrintHubSettings settings) =>
     new(
@@ -233,5 +289,49 @@ static PrintHubSettingsDto ToSettingsDto(PrintHubSettings settings) =>
         settings.Port,
         settings.ApiKeyHeaderName,
         settings.ApiKey,
+        settings.DefaultPrinterName,
         settings.StorageDirectory,
         settings.MaxUploadSizeBytes);
+
+static bool IsDefaultPrinter(PrinterInfo printer, string? defaultPrinterName)
+{
+    if (string.IsNullOrWhiteSpace(defaultPrinterName))
+    {
+        return printer.IsDefault;
+    }
+
+    return string.Equals(printer.Name, defaultPrinterName, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(printer.Id, defaultPrinterName, StringComparison.OrdinalIgnoreCase);
+}
+
+static PrinterInfo? FindPrinter(IEnumerable<PrinterInfo> printers, string printerId)
+{
+    if (string.IsNullOrWhiteSpace(printerId))
+    {
+        return null;
+    }
+
+    return printers.FirstOrDefault(printer =>
+        string.Equals(printer.Id, printerId, StringComparison.OrdinalIgnoreCase));
+}
+
+static UpdatePrintHubSettingsRequest ToUpdateRequest(PrintHubSettings settings, string? defaultPrinterName) =>
+    new(
+        settings.ServiceName,
+        settings.Port,
+        settings.ApiKeyHeaderName,
+        settings.ApiKey,
+        defaultPrinterName,
+        settings.StorageDirectory,
+        settings.MaxUploadSizeBytes);
+
+static CreatePrintJobRequest CreateTestPrintJobRequest(string printerName) =>
+    new(
+        printerName,
+        1,
+        new PrintDocumentRequest(
+            DocumentSourceType.Base64,
+            PrintDocumentFormat.Pdf,
+            Url: null,
+            Data: TestPrintDocumentBase64,
+            FileName: "print-hub-test-page.pdf"));
