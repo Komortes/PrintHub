@@ -1,6 +1,7 @@
 using PrintHub.Api.Workers;
 using PrintHub.Api.Auth;
 using PrintHub.Api.Configuration;
+using PrintHub.Api.Logging;
 using PrintHub.Api.Requests;
 using PrintHub.Contracts.Diagnostics;
 using PrintHub.Contracts.PrintJobs;
@@ -28,6 +29,16 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 builder.Services.AddOpenApi();
+var fileLoggerOptions = builder.Configuration
+    .GetSection(PrintHubFileLoggerOptions.SectionName)
+    .Get<PrintHubFileLoggerOptions>()
+    ?? new PrintHubFileLoggerOptions();
+
+if (fileLoggerOptions.Enabled)
+{
+    builder.Logging.AddProvider(new PrintHubFileLoggerProvider(AppContext.BaseDirectory, fileLoggerOptions));
+}
+
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
