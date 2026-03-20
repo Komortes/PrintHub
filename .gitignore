@@ -1,0 +1,10 @@
+bin/
+obj/
+TestResults/
+.vs/
+
+*.user
+*.rsuser
+*.suo
+
+.DS_Store
