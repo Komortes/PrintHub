@@ -346,3 +346,7 @@ static CreatePrintJobRequest CreateTestPrintJobRequest(string printerName) =>
             Url: null,
             Data: TestPrintDocumentBase64,
             FileName: "print-hub-test-page.pdf"));
+
+public partial class Program
+{
+}
