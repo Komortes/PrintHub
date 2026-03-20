@@ -3,5 +3,6 @@
     <Project Path="src/PrintHub.Api/PrintHub.Api.csproj" />
     <Project Path="src/PrintHub.Contracts/PrintHub.Contracts.csproj" />
     <Project Path="src/PrintHub.Core/PrintHub.Core.csproj" />
+    <Project Path="src/PrintHub.Infrastructure/PrintHub.Infrastructure.csproj" />
   </Folder>
 </Solution>

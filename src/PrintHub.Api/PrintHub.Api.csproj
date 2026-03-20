@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PrintHub.Contracts\PrintHub.Contracts.csproj" />
     <ProjectReference Include="..\PrintHub.Core\PrintHub.Core.csproj" />
+    <ProjectReference Include="..\PrintHub.Infrastructure\PrintHub.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

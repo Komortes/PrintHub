@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrintHub</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f5;
+      --card: #fff;
+      --border: #e0e0e0;
+      --primary: #1a73e8;
+      --primary-hover: #1558b0;
+      --text: #212121;
+      --muted: #757575;
+      --green: #2e7d32;
+      --green-bg: #e8f5e9;
+      --yellow: #f57c00;
+      --yellow-bg: #fff3e0;
+      --red: #c62828;
+      --red-bg: #ffebee;
+      --grey-bg: #f5f5f5;
+      --radius: 8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    /* Header */
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 20px; font-weight: 600; }
+    #health-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #aaa; margin-left: auto;
+      transition: background .3s;
+    }
+    #health-dot.ok { background: #69f0ae; }
+    #health-dot.err { background: #ff5252; }
+    #health-label { font-size: 13px; opacity: .85; }
+
+    /* Banner */
+    #banner {
+      background: #fff3e0; border-bottom: 1px solid #ffe0b2;
+      padding: 12px 24px; display: none; align-items: center; gap: 12px;
+      font-size: 13px; color: #bf360c;
+    }
+    #banner.visible { display: flex; }
+    #banner a { color: var(--primary); cursor: pointer; text-decoration: underline; }
+
+    /* Layout */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 760px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 18px;
+      font-weight: 600;
+      font-size: 15px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-body { padding: 18px; }
+
+    /* Forms */
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    input[type=text], input[type=number], input[type=url], select {
+      width: 100%; padding: 8px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 14px; color: var(--text);
+      background: #fff; outline: none;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus { border-color: var(--primary); }
+    .field { margin-bottom: 14px; }
+    .row { display: flex; gap: 10px; }
+    .row .field { flex: 1; }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab {
+      padding: 10px 16px; font-size: 13px; cursor: pointer;
+      border-bottom: 2px solid transparent; color: var(--muted);
+      transition: color .2s;
+    }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* File drop zone */
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      padding: 28px 16px; text-align: center; cursor: pointer;
+      color: var(--muted); transition: border-color .2s, background .2s;
+    }
+    .dropzone:hover, .dropzone.drag { border-color: var(--primary); background: #e8f0fe; }
+    .dropzone .icon { font-size: 32px; margin-bottom: 8px; }
+    .dropzone p { font-size: 13px; }
+    .dropzone input { display: none; }
+    #file-name { margin-top: 8px; font-size: 12px; color: var(--green); font-weight: 500; }
+
+    /* Button */
+    .btn {
+      width: 100%; padding: 10px; border: none; border-radius: 6px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      background: var(--primary); color: #fff;
+      transition: background .2s;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:disabled { background: #bdbdbd; cursor: not-allowed; }
+    .btn-sm {
+      width: auto; padding: 5px 12px; font-size: 12px; font-weight: 500;
+    }
+    .btn-secondary {
+      background: #e8f0fe;
+      color: var(--primary);
+    }
+    .btn-secondary:hover { background: #d7e3fd; }
+    .btn-ghost {
+      background: #f7f7f7;
+      color: var(--text);
+    }
+    .btn-ghost:hover { background: #ececec; }
+
+    /* Status badge */
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 20px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    .badge.pending  { background: var(--yellow-bg); color: var(--yellow); }
+    .badge.processing { background: #e3f2fd; color: #1565c0; }
+    .badge.completed { background: var(--green-bg); color: var(--green); }
+    .badge.failed   { background: var(--red-bg); color: var(--red); }
+    .badge.canceled { background: var(--grey-bg); color: var(--muted); }
+
+    /* Printer status */
+    .printer-status {
+      width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px;
+    }
+    .printer-status.ready    { background: var(--green); }
+    .printer-status.busy     { background: var(--yellow); }
+    .printer-status.offline,
+    .printer-status.error,
+    .printer-status.unknown  { background: #bdbdbd; }
+
+    /* Printers list */
+    .printer-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .printer-item:last-child { border-bottom: none; }
+    .printer-meta { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+    .printer-name { font-weight: 500; }
+    .printer-default { font-size: 11px; color: var(--muted); margin-left: auto; }
+    .printer-actions { display: flex; gap: 8px; margin-left: auto; }
+    .settings-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
+
+    /* Jobs table */
+    .jobs-toolbar {
+      padding: 12px 18px; border-bottom: 1px solid var(--border);
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    .jobs-toolbar select { width: auto; padding: 6px 8px; font-size: 13px; }
+    .jobs-toolbar label { margin: 0; font-size: 13px; color: var(--text); }
+    #refresh-btn { margin-left: auto; }
+    #auto-refresh-label { font-size: 12px; color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 500; border-bottom: 2px solid var(--border); background: #fafafa; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .job-id { font-family: monospace; font-size: 11px; color: var(--muted); }
+    .error-text { font-size: 11px; color: var(--red); margin-top: 4px; }
+    .empty-state { padding: 40px; text-align: center; color: var(--muted); }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #323232; color: #fff; padding: 10px 20px;
+      border-radius: 6px; font-size: 13px; opacity: 0;
+      transition: opacity .3s; pointer-events: none; z-index: 999;
+    }
+    #toast.show { opacity: 1; }
+    #toast.error { background: var(--red); }
+
+    /* API key settings */
+    #settings-panel { padding: 18px; display: none; }
+    #settings-panel.open { display: block; }
+    #settings-toggle { font-size: 12px; color: var(--primary); cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🖨 PrintHub</h1>
+  <span id="health-label">—</span>
+  <div id="health-dot"></div>
+</header>
+
+<div id="banner">
+  ⚠ API ключ не настроен — защищённые эндпоинты недоступны.
+  <a onclick="openSettings()">Настроить</a>
+</div>
+
+<main>
+  <!-- Left column -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- API Key card -->
+    <div class="card">
+      <div class="card-header">
+        Настройки
+        <span id="settings-toggle" onclick="toggleSettings()">▼ Показать</span>
+      </div>
+      <div id="settings-panel">
+        <div class="field">
+          <label>API Ключ</label>
+          <input type="text" id="api-key-input" placeholder="Введите API ключ...">
+        </div>
+        <div class="settings-note">
+          Ключ хранится локально в этом браузере, чтобы интерфейс мог работать после перезагрузки страницы.
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Имя сервиса</label>
+            <input type="text" id="service-name-input" placeholder="PrintHub">
+          </div>
+          <div class="field">
+            <label>Порт</label>
+            <input type="number" id="port-input" min="1" max="65535" placeholder="5051">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Заголовок API ключа</label>
+            <input type="text" id="api-key-header-input" placeholder="X-PrintHub-Api-Key">
+          </div>
+          <div class="field">
+            <label>Макс. размер файла (байт)</label>
+            <input type="number" id="max-upload-size-input" min="1" placeholder="10485760">
+          </div>
+        </div>
+        <div class="field">
+          <label>Директория хранения</label>
+          <input type="text" id="storage-directory-input" placeholder="data/documents">
+        </div>
+        <button class="btn" onclick="saveSettings()">Сохранить</button>
+      </div>
+    </div>
+
+    <!-- Printers card -->
+    <div class="card">
+      <div class="card-header">
+        Принтеры
+        <button class="btn btn-sm" onclick="loadPrinters()">↻</button>
+      </div>
+      <div class="card-body" id="printers-list">
+        <div class="empty-state">Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- Create job card -->
+    <div class="card">
+      <div class="card-header">Новое задание</div>
+      <div class="card-body">
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('upload')">Файл</div>
+          <div class="tab" onclick="switchTab('url')">Ссылка</div>
+          <div class="tab" onclick="switchTab('base64')">Base64</div>
+        </div>
+
+        <!-- Upload tab -->
+        <div id="tab-upload" class="tab-panel active" style="margin-top:14px;">
+          <div class="field">
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="handleDrop(event)">
+              <div class="icon">📄</div>
+              <p>Нажмите или перетащите PDF файл</p>
+              <input type="file" id="file-input" accept=".pdf" onchange="handleFileSelect(event)">
+            </div>
+            <div id="file-name"></div>
+          </div>
+        </div>
+
+        <!-- URL tab -->
+        <div id="tab-url" class="tab-panel" style="margin-top:14px;">
+          <div class="field">
+            <label>Ссылка на PDF</label>
+            <input type="url" id="url-input" placeholder="https://...">
+          </div>
+        </div>
+
+        <!-- Base64 tab -->
+        <div id="tab-base64" class="tab-panel" style="margin-top:14px;">
+          <div class="field">
+            <label>Base64 данные файла</label>
+            <input type="text" id="base64-input" placeholder="JVBERi0x...">
+          </div>
+          <div class="field">
+            <label>Имя файла</label>
+            <input type="text" id="base64-name-input" placeholder="document.pdf">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Принтер</label>
+            <select id="printer-select">
+              <option value="">По умолчанию</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:80px;">
+            <label>Копий</label>
+            <input type="number" id="copies-input" value="1" min="1" max="99">
+          </div>
+        </div>
+
+        <button class="btn" id="print-btn" onclick="createJob()">Печатать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Jobs -->
+  <div class="card">
+    <div class="card-header">
+      Задания на печать
+    </div>
+    <div class="jobs-toolbar">
+      <label>Статус:</label>
+      <select id="status-filter" onchange="loadJobs()">
+        <option value="">Все</option>
+        <option value="pending">Ожидание</option>
+        <option value="processing">В обработке</option>
+        <option value="completed">Выполнено</option>
+        <option value="failed">Ошибка</option>
+        <option value="canceled">Отменено</option>
+      </select>
+      <button class="btn btn-sm" id="refresh-btn" onclick="loadJobs()">↻ Обновить</button>
+      <span id="auto-refresh-label">авто-обновление 5с</span>
+    </div>
+    <div id="jobs-container">
+      <div class="empty-state">Загрузка...</div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const API_KEY_STORAGE_KEY = 'printhub.apiKey';
+  let apiKey = loadStoredApiKey();
+  let currentSettings = null;
+  let printersCache = [];
+  let activeTab = 'upload';
+  let selectedFile = null;
+  let refreshTimer = null;
+
+  // ── Init ──────────────────────────────────────────────
+  async function init() {
+    document.getElementById('api-key-input').value = apiKey;
+    await checkHealth();
+    await loadSettings();
+    await loadPrinters();
+    await loadJobs();
+    startAutoRefresh();
+  }
+
+  // ── Health ────────────────────────────────────────────
+  async function checkHealth() {
+    const dot = document.getElementById('health-dot');
+    const label = document.getElementById('health-label');
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      dot.className = 'ok';
+      label.textContent = d.service || 'PrintHub';
+    } catch {
+      dot.className = 'err';
+      label.textContent = 'Недоступен';
+    }
+  }
+
+  // ── Settings ──────────────────────────────────────────
+  async function loadSettings() {
+    try {
+      const r = await fetch('/settings', { headers: authHeaders(resolveRequestApiKey()) });
+      if (!r.ok) {
+        applySettingsToForm(currentSettings || fallbackSettings());
+        showBanner(!apiKey);
+        return;
+      }
+
+      currentSettings = await r.json();
+
+      if (currentSettings.apiKey) {
+        apiKey = currentSettings.apiKey;
+        persistApiKey(apiKey);
+      }
+
+      applySettingsToForm(currentSettings);
+      showBanner(!currentSettings.apiKey);
+    } catch {
+      applySettingsToForm(currentSettings || fallbackSettings());
+    }
+  }
+
+  async function saveSettings() {
+    const payload = collectSettingsPayload();
+
+    try {
+      const r = await fetch('/settings', {
+        method: 'PUT',
+        headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (r.ok) {
+        currentSettings = await r.json();
+        apiKey = currentSettings.apiKey || '';
+        persistApiKey(apiKey);
+        applySettingsToForm(currentSettings);
+        showToast('Настройки сохранены');
+        showBanner(!apiKey);
+        await checkHealth();
+        await loadPrinters();
+        await loadJobs();
+      } else {
+        const d = await r.json();
+        showToast(d.detail || 'Ошибка сохранения', true);
+      }
+    } catch (e) {
+      showToast('Ошибка: ' + e.message, true);
+    }
+  }
+
+  function toggleSettings() {
+    const panel = document.getElementById('settings-panel');
+    const btn = document.getElementById('settings-toggle');
+    const open = panel.classList.toggle('open');
+    btn.textContent = open ? '▲ Скрыть' : '▼ Показать';
+  }
+
+  function openSettings() {
+    const panel = document.getElementById('settings-panel');
+    const btn = document.getElementById('settings-toggle');
+    panel.classList.add('open');
+    btn.textContent = '▲ Скрыть';
+    panel.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function showBanner(show) {
+    document.getElementById('banner').classList.toggle('visible', show);
+  }
+
+  // ── Printers ──────────────────────────────────────────
+  async function loadPrinters() {
+    const el = document.getElementById('printers-list');
+    const sel = document.getElementById('printer-select');
+    try {
+      const r = await fetch('/printers', { headers: authHeaders(resolveRequestApiKey()) });
+      if (!r.ok) {
+        printersCache = [];
+        el.innerHTML = `<div class="empty-state">Нет доступа к принтерам</div>`;
+        return;
+      }
+      const printers = await r.json();
+      printersCache = printers;
+
+      if (!printers.length) {
+        el.innerHTML = `<div class="empty-state">Принтеры не найдены</div>`;
+        return;
+      }
+
+      el.innerHTML = printers.map(p => `
+        <div class="printer-item">
+          <div class="printer-meta">
+            <span class="printer-status ${(p.status||'unknown').toLowerCase()}"></span>
+            <span class="printer-name">${esc(p.name)}</span>
+            ${p.isDefault ? '<span class="printer-default">по умолч.</span>' : ''}
+          </div>
+          <div class="printer-actions">
+            <button
+              class="btn btn-sm ${p.isDefault ? 'btn-ghost' : 'btn-secondary'}"
+              ${p.isDefault ? 'disabled' : ''}
+              onclick="setDefaultPrinter('${escAttr(p.id)}')">${p.isDefault ? 'Основной' : 'Сделать основным'}</button>
+            <button
+              class="btn btn-sm btn-ghost"
+              onclick="testPrinter('${escAttr(p.id)}')">Тест</button>
+          </div>
+        </div>
+      `).join('');
+
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">По умолчанию</option>' +
+        printers.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+      if (prev && printers.some(p => p.name === prev)) {
+        sel.value = prev;
+      } else {
+        sel.value = '';
+      }
+    } catch (e) {
+      printersCache = [];
+      el.innerHTML = `<div class="empty-state">Ошибка загрузки</div>`;
+    }
+  }
+
+  async function setDefaultPrinter(printerId) {
+    try {
+      const r = await fetch(`/printers/${encodeURIComponent(printerId)}/default`, {
+        method: 'PUT',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (r.ok) {
+        const printer = await r.json();
+        currentSettings = { ...(currentSettings || fallbackSettings()), defaultPrinterName: printer.name };
+        showToast(`Основной принтер: ${printer.name}`);
+        await loadPrinters();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        showToast(d.detail || 'Не удалось сохранить принтер по умолчанию', true);
+      }
+    } catch (e) {
+      showToast('Ошибка: ' + e.message, true);
+    }
+  }
+
+  async function testPrinter(printerId) {
+    try {
+      const r = await fetch(`/printers/${encodeURIComponent(printerId)}/test-print`, {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (r.ok || r.status === 201) {
+        const d = await r.json();
+        showToast(`Тестовая печать отправлена: ${d.jobId.slice(0, 8)}…`);
+        await loadJobs();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        showToast(d.detail || 'Не удалось отправить тестовую печать', true);
+      }
+    } catch (e) {
+      showToast('Ошибка: ' + e.message, true);
+    }
+  }
+
+  // ── Jobs ──────────────────────────────────────────────
+  async function loadJobs() {
+    const container = document.getElementById('jobs-container');
+    const status = document.getElementById('status-filter').value;
+    let url = '/print-jobs?limit=100';
+    if (status) url += `&status=${status}`;
+    try {
+      const r = await fetch(url, { headers: authHeaders(resolveRequestApiKey()) });
+      if (!r.ok) {
+        container.innerHTML = `<div class="empty-state">Нет доступа к заданиям</div>`;
+        return;
+      }
+      const jobs = await r.json();
+      if (!jobs.length) {
+        container.innerHTML = `<div class="empty-state">Заданий нет</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Принтер</th>
+              <th>Статус</th>
+              <th>Копий</th>
+              <th>Создано</th>
+              <th>Завершено</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${jobs.map(j => `
+              <tr>
+                <td><span class="job-id">${esc(j.jobId.slice(0,8))}…</span></td>
+                <td>${esc(j.printerName || '—')}</td>
+                <td>
+                  <span class="badge ${j.status.toLowerCase()}">${statusLabel(j.status)}</span>
+                  ${j.errorMessage ? `<div class="error-text">${esc(j.errorMessage)}</div>` : ''}
+                </td>
+                <td>${j.copies}</td>
+                <td>${fmtTime(j.createdAt)}</td>
+                <td>${j.completedAt ? fmtTime(j.completedAt) : '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    } catch (e) {
+      container.innerHTML = `<div class="empty-state">Ошибка загрузки</div>`;
+    }
+  }
+
+  function startAutoRefresh() {
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(loadJobs, 5000);
+  }
+
+  // ── Create job ────────────────────────────────────────
+  async function createJob() {
+    const btn = document.getElementById('print-btn');
+    const printer = document.getElementById('printer-select').value || null;
+    const copies = parseInt(document.getElementById('copies-input').value) || 1;
+
+    if (activeTab === 'upload') {
+      if (!selectedFile) { showToast('Выберите PDF файл', true); return; }
+      btn.disabled = true;
+      try {
+        const form = new FormData();
+        form.append('file', selectedFile);
+        if (printer) form.append('printerName', printer);
+        form.append('copies', copies);
+        const r = await fetch('/print-jobs', { method: 'POST', headers: authHeaders(resolveRequestApiKey()), body: form });
+        await handleJobResponse(r);
+      } finally { btn.disabled = false; }
+
+    } else if (activeTab === 'url') {
+      const url = document.getElementById('url-input').value.trim();
+      if (!url) { showToast('Введите ссылку', true); return; }
+      btn.disabled = true;
+      try {
+        const r = await fetch('/print-jobs', {
+          method: 'POST',
+          headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printerName: printer,
+            copies,
+            document: { type: 'url', format: 'pdf', url }
+          })
+        });
+        await handleJobResponse(r);
+      } finally { btn.disabled = false; }
+
+    } else if (activeTab === 'base64') {
+      const data = document.getElementById('base64-input').value.trim();
+      const fileName = document.getElementById('base64-name-input').value.trim() || 'document.pdf';
+      if (!data) { showToast('Введите Base64 данные', true); return; }
+      btn.disabled = true;
+      try {
+        const r = await fetch('/print-jobs', {
+          method: 'POST',
+          headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printerName: printer,
+            copies,
+            document: { type: 'base64', format: 'pdf', data, fileName }
+          })
+        });
+        await handleJobResponse(r);
+      } finally { btn.disabled = false; }
+    }
+  }
+
+  async function handleJobResponse(r) {
+    if (r.ok || r.status === 201) {
+      showToast('Задание создано');
+      selectedFile = null;
+      document.getElementById('file-name').textContent = '';
+      document.getElementById('url-input').value = '';
+      document.getElementById('base64-input').value = '';
+      await loadJobs();
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.detail || `Ошибка ${r.status}`, true);
+    }
+  }
+
+  // ── File handling ─────────────────────────────────────
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) setFile(file);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropzone').classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    document.getElementById('file-name').textContent = '✓ ' + file.name;
+  }
+
+  // ── Tabs ──────────────────────────────────────────────
+  function switchTab(name) {
+    activeTab = name;
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      const names = ['upload','url','base64'];
+      t.classList.toggle('active', names[i] === name);
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // ── Utils ─────────────────────────────────────────────
+  function fallbackSettings() {
+    return {
+      serviceName: 'PrintHub',
+      port: 5051,
+      apiKeyHeaderName: 'X-PrintHub-Api-Key',
+      apiKey: apiKey || null,
+      defaultPrinterName: null,
+      storageDirectory: 'data/documents',
+      maxUploadSizeBytes: 10485760
+    };
+  }
+
+  function applySettingsToForm(settings) {
+    const next = settings || fallbackSettings();
+    document.getElementById('api-key-input').value = apiKey || next.apiKey || '';
+    document.getElementById('service-name-input').value = next.serviceName || '';
+    document.getElementById('port-input').value = next.port || 5051;
+    document.getElementById('api-key-header-input').value = next.apiKeyHeaderName || 'X-PrintHub-Api-Key';
+    document.getElementById('storage-directory-input').value = next.storageDirectory || 'data/documents';
+    document.getElementById('max-upload-size-input').value = next.maxUploadSizeBytes || 10485760;
+  }
+
+  function collectSettingsPayload() {
+    const fallback = currentSettings || fallbackSettings();
+    return {
+      serviceName: document.getElementById('service-name-input').value.trim() || fallback.serviceName,
+      port: parseInt(document.getElementById('port-input').value, 10) || fallback.port,
+      apiKeyHeaderName: document.getElementById('api-key-header-input').value.trim() || fallback.apiKeyHeaderName,
+      apiKey: document.getElementById('api-key-input').value.trim() || null,
+      defaultPrinterName: fallback.defaultPrinterName || null,
+      storageDirectory: document.getElementById('storage-directory-input').value.trim() || fallback.storageDirectory,
+      maxUploadSizeBytes: parseInt(document.getElementById('max-upload-size-input').value, 10) || fallback.maxUploadSizeBytes
+    };
+  }
+
+  function loadStoredApiKey() {
+    try {
+      return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function persistApiKey(value) {
+    try {
+      if (value) {
+        localStorage.setItem(API_KEY_STORAGE_KEY, value);
+      } else {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+      }
+    } catch {}
+  }
+
+  function resolveRequestApiKey() {
+    return apiKey || document.getElementById('api-key-input').value.trim();
+  }
+
+  function authHeaders(apiKeyValue = apiKey) {
+    return apiKeyValue ? { 'X-PrintHub-Api-Key': apiKeyValue } : {};
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function escAttr(s) {
+    return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) +
+           ' ' + d.toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit' });
+  }
+
+  const STATUS_LABELS = {
+    pending: 'Ожидание',
+    processing: 'Печать...',
+    completed: 'Готово',
+    failed: 'Ошибка',
+    canceled: 'Отменено'
+  };
+
+  function statusLabel(s) {
+    return STATUS_LABELS[(s||'').toLowerCase()] || s;
+  }
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = isError ? 'error show' : 'show';
+    setTimeout(() => t.className = '', 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>

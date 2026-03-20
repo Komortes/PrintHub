@@ -1,6 +1,84 @@
 @PrintHub.Api_HostAddress = http://localhost:5051
+@ApiKey = dev-local-api-key
+@jobId = replace-me
 
-GET {{PrintHub.Api_HostAddress}}/weatherforecast/
+GET {{PrintHub.Api_HostAddress}}/health
 Accept: application/json
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/settings
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+PUT {{PrintHub.Api_HostAddress}}/settings
+Content-Type: application/json
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+{
+  "serviceName": "PrintHub",
+  "port": 5051,
+  "apiKeyHeaderName": "X-PrintHub-Api-Key",
+  "apiKey": "dev-local-api-key",
+  "defaultPrinterName": "Office Printer",
+  "storageDirectory": "data/documents",
+  "maxUploadSizeBytes": 10485760
+}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/printers
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+PUT {{PrintHub.Api_HostAddress}}/printers/printer_1/default
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/printers/printer_1/test-print
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/print-jobs
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/print-jobs?activeOnly=true&limit=10
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs
+Content-Type: application/json
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+{
+  "printerName": "Office Printer",
+  "document": {
+    "type": "url",
+    "url": "https://example.com/file.pdf",
+    "data": null,
+    "fileName": "file.pdf"
+  }
+}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
 
 ###
