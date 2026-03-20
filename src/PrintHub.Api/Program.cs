@@ -50,7 +50,21 @@ PrintJobRequestParser.ConfigureFormOptions(builder.Services, builder.Configurati
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPrintJobQueue, InMemoryPrintJobQueue>();
 builder.Services.AddSingleton<IPrintJobStore, InMemoryPrintJobStore>();
-builder.Services.AddSingleton<IPrintBackend, MockPrintBackend>();
+builder.Services.AddSingleton<MockPrintBackend>();
+builder.Services.AddSingleton<LpPrintBackend>();
+builder.Services.AddSingleton<IPrintBackend>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
+    var logger = serviceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("PrintHub.PrintBackend");
+
+    return ResolvePrintBackend(
+        options.BackendMode,
+        serviceProvider.GetRequiredService<MockPrintBackend>(),
+        serviceProvider.GetRequiredService<LpPrintBackend>(),
+        logger);
+});
 builder.Services.AddSingleton<IPrintHubSettingsStore>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
@@ -346,6 +360,45 @@ static CreatePrintJobRequest CreateTestPrintJobRequest(string printerName) =>
             Url: null,
             Data: TestPrintDocumentBase64,
             FileName: "print-hub-test-page.pdf"));
+
+static IPrintBackend ResolvePrintBackend(
+    PrintBackendMode mode,
+    MockPrintBackend mockBackend,
+    LpPrintBackend systemBackend,
+    ILogger logger)
+{
+    if (!Enum.IsDefined(mode))
+    {
+        logger.LogWarning("Unsupported print backend mode '{BackendMode}'. Falling back to automatic selection.", mode);
+        mode = PrintBackendMode.Auto;
+    }
+
+    switch (mode)
+    {
+        case PrintBackendMode.Mock:
+            logger.LogInformation("Using mock print backend.");
+            return mockBackend;
+        case PrintBackendMode.System:
+            if (!LpPrintBackend.IsSupported())
+            {
+                throw new InvalidOperationException(
+                    "PrintHub is configured to use the system print backend, but 'lp'/'lpstat' are not available on this machine.");
+            }
+
+            logger.LogInformation("Using system print backend via lp/cups.");
+            return systemBackend;
+        case PrintBackendMode.Auto:
+        default:
+            if (LpPrintBackend.IsSupported())
+            {
+                logger.LogInformation("Using system print backend via lp/cups.");
+                return systemBackend;
+            }
+
+            logger.LogWarning("System print backend is unavailable. Falling back to the mock backend.");
+            return mockBackend;
+    }
+}
 
 public partial class Program
 {

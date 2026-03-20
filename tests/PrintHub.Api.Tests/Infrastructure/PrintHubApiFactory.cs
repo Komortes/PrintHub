@@ -32,6 +32,7 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
                 ["PrintHub:ServiceName"] = "PrintHub.Test",
                 ["PrintHub:ApiKey"] = "test-api-key",
                 ["PrintHub:ApiKeyHeaderName"] = "X-PrintHub-Api-Key",
+                ["PrintHub:BackendMode"] = "Mock",
                 ["PrintHub:SettingsFilePath"] = settingsFilePath,
                 ["PrintHub:StorageDirectory"] = storageDirectory,
                 ["PrintHub:MaxUploadSizeBytes"] = "10485760",

@@ -9,6 +9,7 @@ public sealed class PrintHubApiOptions
     public const string DefaultSettingsFilePath = "data/settings.json";
     public const string DefaultStorageDirectory = "data/documents";
     public const int DefaultPort = 5051;
+    public const PrintBackendMode DefaultBackendMode = PrintBackendMode.Auto;
 
     public string ServiceName { get; set; } = "PrintHub";
 
@@ -25,4 +26,6 @@ public sealed class PrintHubApiOptions
     public string StorageDirectory { get; set; } = DefaultStorageDirectory;
 
     public int Port { get; set; } = DefaultPort;
+
+    public PrintBackendMode BackendMode { get; set; } = DefaultBackendMode;
 }
