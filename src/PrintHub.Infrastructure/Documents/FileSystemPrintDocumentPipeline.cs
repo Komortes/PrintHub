@@ -4,6 +4,7 @@ using PrintHub.Contracts.PrintJobs;
 using PrintHub.Core.Documents;
 using PrintHub.Core.Models;
 using PrintHub.Core.Settings;
+using PrintHub.Infrastructure.Paths;
 
 namespace PrintHub.Infrastructure.Documents;
 
@@ -13,13 +14,16 @@ public sealed class FileSystemPrintDocumentPipeline : IPrintDocumentPipeline
 
     private readonly HttpClient _httpClient;
     private readonly IPrintHubSettingsService _settingsService;
+    private readonly PrintHubAppDataPaths _appDataPaths;
 
     public FileSystemPrintDocumentPipeline(
         HttpClient httpClient,
-        IPrintHubSettingsService settingsService)
+        IPrintHubSettingsService settingsService,
+        PrintHubAppDataPaths appDataPaths)
     {
         _httpClient = httpClient;
         _settingsService = settingsService;
+        _appDataPaths = appDataPaths;
     }
 
     public async ValueTask<PrintDocument> PrepareAsync(
@@ -185,16 +189,9 @@ public sealed class FileSystemPrintDocumentPipeline : IPrintDocumentPipeline
         }
     }
 
-    private static string ResolveStorageDirectory(string storageDirectory)
+    private string ResolveStorageDirectory(string storageDirectory)
     {
-        var relativeOrAbsolutePath = string.IsNullOrWhiteSpace(storageDirectory)
-            ? "data/documents"
-            : storageDirectory.Trim();
-
-        var resolvedPath = Path.IsPathRooted(relativeOrAbsolutePath)
-            ? relativeOrAbsolutePath
-            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relativeOrAbsolutePath));
-
+        var resolvedPath = _appDataPaths.ResolveDataPath(storageDirectory, "data/documents");
         Directory.CreateDirectory(resolvedPath);
         return resolvedPath;
     }

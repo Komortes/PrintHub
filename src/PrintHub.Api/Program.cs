@@ -16,6 +16,7 @@ using PrintHub.Core.Settings;
 using PrintHub.Core.Services;
 using PrintHub.Infrastructure.Backends;
 using PrintHub.Infrastructure.Documents;
+using PrintHub.Infrastructure.Paths;
 using PrintHub.Infrastructure.Repositories;
 using PrintHub.Infrastructure.Settings;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = AppContext.BaseDirectory
 });
 
+var appDataPaths = PrintHubAppDataPaths.CreateDefault();
+
 builder.Services.AddOpenApi();
 var fileLoggerOptions = builder.Configuration
     .GetSection(PrintHubFileLoggerOptions.SectionName)
@@ -37,7 +40,7 @@ var fileLoggerOptions = builder.Configuration
 
 if (fileLoggerOptions.Enabled)
 {
-    builder.Logging.AddProvider(new PrintHubFileLoggerProvider(AppContext.BaseDirectory, fileLoggerOptions));
+    builder.Logging.AddProvider(new PrintHubFileLoggerProvider(appDataPaths.AppDataRootPath, fileLoggerOptions));
 }
 
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -48,12 +51,14 @@ builder.Services
     .AddOptions<PrintHubApiOptions>()
     .Bind(builder.Configuration.GetSection(PrintHubApiOptions.SectionName));
 PrintJobRequestParser.ConfigureFormOptions(builder.Services, builder.Configuration);
+builder.Services.AddSingleton(appDataPaths);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPrintJobQueue, InMemoryPrintJobQueue>();
 builder.Services.AddSingleton<IPrintJobStore>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
-    return new JsonPrintJobStore(AppContext.BaseDirectory, options.JobsFilePath);
+    var paths = serviceProvider.GetRequiredService<PrintHubAppDataPaths>();
+    return new JsonPrintJobStore(paths.AppDataRootPath, options.JobsFilePath);
 });
 builder.Services.AddSingleton<MockPrintBackend>();
 builder.Services.AddSingleton<LpPrintBackend>();
@@ -75,7 +80,8 @@ builder.Services.AddSingleton<IPrintBackend>(serviceProvider =>
 builder.Services.AddSingleton<IPrintHubSettingsStore>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
-    return new JsonPrintHubSettingsStore(AppContext.BaseDirectory, options.SettingsFilePath);
+    var paths = serviceProvider.GetRequiredService<PrintHubAppDataPaths>();
+    return new JsonPrintHubSettingsStore(paths.AppDataRootPath, options.SettingsFilePath);
 });
 builder.Services.AddSingleton<IPrintHubSettingsService>(serviceProvider =>
 {
