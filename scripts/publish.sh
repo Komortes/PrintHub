@@ -33,7 +33,7 @@ detect_runtime() {
 CONFIGURATION="${CONFIGURATION:-Release}"
 RUNTIME="${1:-$(detect_runtime)}"
 OUTPUT_DIR="${2:-$ROOT_DIR/output/publish/$RUNTIME}"
-SELF_CONTAINED="${SELF_CONTAINED:-false}"
+SELF_CONTAINED="${SELF_CONTAINED:-true}"
 
 echo "Publishing PrintHub"
 echo "  Runtime:        $RUNTIME"
@@ -50,6 +50,9 @@ dotnet publish "$PROJECT_PATH" \
 cat <<EOF
 
 Publish completed.
+
+This publish is self-contained by default, so the target machine does not need
+the .NET runtime installed.
 
 Default runtime data root:
   macOS:   ~/Library/Application Support/PrintHub

@@ -2,7 +2,7 @@ param(
     [string]$Runtime,
     [string]$Configuration = "Release",
     [string]$OutputDir,
-    [string]$SelfContained = "false"
+    [string]$SelfContained = "true"
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,6 +62,8 @@ dotnet publish $ProjectPath `
 
 Write-Host ""
 Write-Host "Publish completed."
+Write-Host ""
+Write-Host "This publish is self-contained by default, so the target machine does not need the .NET runtime installed."
 Write-Host ""
 Write-Host "Default runtime data root:"
 Write-Host "  macOS:   ~/Library/Application Support/PrintHub"

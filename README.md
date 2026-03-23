@@ -41,6 +41,9 @@ $env:PRINTHUB_HOME = "C:\absolute\path"
 
 ## Publish
 
+The publish scripts default to a self-contained build. That means the resulting
+folder can be shipped to an end user without asking them to install the .NET runtime.
+
 macOS/Linux:
 
 ```bash
@@ -54,3 +57,13 @@ Windows PowerShell:
 ```
 
 Both scripts publish `src/PrintHub.Api` into `output/publish/<runtime>`.
+
+Override self-contained mode only if you explicitly want a framework-dependent build:
+
+```bash
+SELF_CONTAINED=false ./scripts/publish.sh
+```
+
+```powershell
+./scripts/publish.ps1 -SelfContained false
+```
