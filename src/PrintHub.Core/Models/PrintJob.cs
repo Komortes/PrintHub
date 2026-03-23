@@ -9,14 +9,21 @@ public sealed class PrintJob
         string? printerName,
         int copies,
         PrintDocument document,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        PrintJobStatus status,
+        DateTimeOffset? startedAt,
+        DateTimeOffset? completedAt,
+        string? errorMessage)
     {
         Id = id;
         PrinterName = printerName;
         Copies = copies;
         Document = document;
         CreatedAt = createdAt;
-        Status = PrintJobStatus.Pending;
+        Status = status;
+        StartedAt = startedAt;
+        CompletedAt = completedAt;
+        ErrorMessage = Normalize(errorMessage);
     }
 
     public string Id { get; }
@@ -56,7 +63,46 @@ public sealed class PrintJob
 
         ArgumentNullException.ThrowIfNull(document);
 
-        return new PrintJob(id.Trim(), Normalize(printerName), copies, document, createdAt);
+        return new PrintJob(
+            id.Trim(),
+            Normalize(printerName),
+            copies,
+            document,
+            createdAt,
+            PrintJobStatus.Pending,
+            startedAt: null,
+            completedAt: null,
+            errorMessage: null);
+    }
+
+    public static PrintJob Restore(
+        string id,
+        string? printerName,
+        int copies,
+        PrintDocument document,
+        DateTimeOffset createdAt,
+        PrintJobStatus status,
+        DateTimeOffset? startedAt,
+        DateTimeOffset? completedAt,
+        string? errorMessage)
+    {
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), "Print job status is not supported.");
+        }
+
+        ArgumentNullException.ThrowIfNull(document);
+
+        return new PrintJob(
+            id.Trim(),
+            Normalize(printerName),
+            copies,
+            document,
+            createdAt,
+            status,
+            startedAt,
+            completedAt,
+            errorMessage);
     }
 
     public bool TryMarkProcessing(DateTimeOffset startedAt)

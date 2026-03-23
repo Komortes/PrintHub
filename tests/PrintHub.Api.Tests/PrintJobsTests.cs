@@ -61,6 +61,80 @@ public sealed class PrintJobsTests
         Assert.Single(storedFiles);
     }
 
+    [Fact]
+    public async Task CompletedPrintJob_IsRestoredAfterHostRestart()
+    {
+        var tempRootPath = Path.Combine(
+            Path.GetTempPath(),
+            $"printhub-api-restart-{Guid.NewGuid():N}");
+
+        try
+        {
+            string jobId;
+
+            using (var firstFactory = new PrintHubApiFactory(tempRootPath: tempRootPath))
+            using (var firstClient = firstFactory.CreateClient())
+            using (var createRequest = new HttpRequestMessage(HttpMethod.Post, "/print-jobs"))
+            {
+                createRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+                createRequest.Content = JsonContent.Create(
+                    new CreatePrintJobRequest(
+                        PrinterName: "Office Printer",
+                        Copies: 1,
+                        Document: new PrintDocumentRequest(
+                            DocumentSourceType.Base64,
+                            PrintDocumentFormat.Pdf,
+                            Url: null,
+                            Data: PdfBase64,
+                            FileName: "restart-smoke.pdf")),
+                    options: TestJson.SerializerOptions);
+
+                var createResponse = await firstClient.SendAsync(createRequest);
+                createResponse.EnsureSuccessStatusCode();
+
+                var createdJob = await createResponse.Content.ReadFromJsonAsync<CreatePrintJobResponse>(TestJson.SerializerOptions);
+                Assert.NotNull(createdJob);
+
+                jobId = createdJob!.JobId;
+
+                var completedJob = await WaitForCompletionAsync(firstClient, jobId);
+                Assert.Equal(PrintJobStatus.Completed, completedJob.Status);
+            }
+
+            Assert.True(File.Exists(Path.Combine(tempRootPath, "jobs.json")));
+
+            using var secondFactory = new PrintHubApiFactory(tempRootPath: tempRootPath);
+            using var secondClient = secondFactory.CreateClient();
+            using var listRequest = new HttpRequestMessage(HttpMethod.Get, "/print-jobs?limit=10");
+            listRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+            var listResponse = await secondClient.SendAsync(listRequest);
+
+            Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+
+            var jobs = await listResponse.Content.ReadFromJsonAsync<PrintJobDto[]>(TestJson.SerializerOptions);
+
+            Assert.NotNull(jobs);
+            Assert.Contains(jobs!, job => job.JobId == jobId && job.Status == PrintJobStatus.Completed);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempRootPath))
+                {
+                    Directory.Delete(tempRootPath, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
     private static async Task<PrintJobDto> WaitForCompletionAsync(HttpClient client, string jobId)
     {
         for (var attempt = 0; attempt < 20; attempt++)

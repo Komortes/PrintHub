@@ -7,6 +7,7 @@ public sealed class PrintHubApiOptions
     public const long DefaultMaxMultipartBodySizeBytes = 100 * 1024 * 1024;
     public const string DefaultApiKeyHeaderName = "X-PrintHub-Api-Key";
     public const string DefaultSettingsFilePath = "data/settings.json";
+    public const string DefaultJobsFilePath = "data/jobs.json";
     public const string DefaultStorageDirectory = "data/documents";
     public const int DefaultPort = 5051;
     public const PrintBackendMode DefaultBackendMode = PrintBackendMode.Auto;
@@ -22,6 +23,8 @@ public sealed class PrintHubApiOptions
     public string ApiKeyHeaderName { get; set; } = DefaultApiKeyHeaderName;
 
     public string SettingsFilePath { get; set; } = DefaultSettingsFilePath;
+
+    public string JobsFilePath { get; set; } = DefaultJobsFilePath;
 
     public string StorageDirectory { get; set; } = DefaultStorageDirectory;
 

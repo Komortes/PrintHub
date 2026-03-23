@@ -16,6 +16,7 @@ using PrintHub.Core.Settings;
 using PrintHub.Core.Services;
 using PrintHub.Infrastructure.Backends;
 using PrintHub.Infrastructure.Documents;
+using PrintHub.Infrastructure.Repositories;
 using PrintHub.Infrastructure.Settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -49,7 +50,11 @@ builder.Services
 PrintJobRequestParser.ConfigureFormOptions(builder.Services, builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPrintJobQueue, InMemoryPrintJobQueue>();
-builder.Services.AddSingleton<IPrintJobStore, InMemoryPrintJobStore>();
+builder.Services.AddSingleton<IPrintJobStore>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
+    return new JsonPrintJobStore(AppContext.BaseDirectory, options.JobsFilePath);
+});
 builder.Services.AddSingleton<MockPrintBackend>();
 builder.Services.AddSingleton<LpPrintBackend>();
 builder.Services.AddSingleton<WindowsPrintBackend>();

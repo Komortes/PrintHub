@@ -7,13 +7,18 @@ namespace PrintHub.Api.Tests.Infrastructure;
 public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
 {
     private readonly IReadOnlyDictionary<string, string?> _overrides;
-    private readonly string _tempRootPath = Path.Combine(
-        Path.GetTempPath(),
-        $"printhub-api-tests-{Guid.NewGuid():N}");
+    private readonly bool _ownsTempRoot;
+    private readonly string _tempRootPath;
 
-    public PrintHubApiFactory(IReadOnlyDictionary<string, string?>? overrides = null)
+    public PrintHubApiFactory(
+        IReadOnlyDictionary<string, string?>? overrides = null,
+        string? tempRootPath = null)
     {
         _overrides = overrides ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        _ownsTempRoot = tempRootPath is null;
+        _tempRootPath = tempRootPath ?? Path.Combine(
+            Path.GetTempPath(),
+            $"printhub-api-tests-{Guid.NewGuid():N}");
     }
 
     public string TempRootPath => _tempRootPath;
@@ -24,6 +29,7 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             var settingsFilePath = Path.Combine(_tempRootPath, "settings.json");
+            var jobsFilePath = Path.Combine(_tempRootPath, "jobs.json");
             var storageDirectory = Path.Combine(_tempRootPath, "documents");
             var logsDirectory = Path.Combine(_tempRootPath, "logs");
 
@@ -34,6 +40,7 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
                 ["PrintHub:ApiKeyHeaderName"] = "X-PrintHub-Api-Key",
                 ["PrintHub:BackendMode"] = "Mock",
                 ["PrintHub:SettingsFilePath"] = settingsFilePath,
+                ["PrintHub:JobsFilePath"] = jobsFilePath,
                 ["PrintHub:StorageDirectory"] = storageDirectory,
                 ["PrintHub:MaxUploadSizeBytes"] = "10485760",
                 ["PrintHub:MaxMultipartBodySizeBytes"] = "104857600",
@@ -54,7 +61,7 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
 
-        if (!disposing || !Directory.Exists(_tempRootPath))
+        if (!disposing || !_ownsTempRoot || !Directory.Exists(_tempRootPath))
         {
             return;
         }
