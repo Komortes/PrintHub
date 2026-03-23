@@ -10,6 +10,13 @@ $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $ProjectPath = Join-Path $RootDir "src/PrintHub.Api/PrintHub.Api.csproj"
 
+function Install-Launchers {
+    Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.sh") (Join-Path $OutputDir "run-printhub.sh") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.sh") (Join-Path $OutputDir "stop-printhub.sh") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.ps1") (Join-Path $OutputDir "run-printhub.ps1") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.ps1") (Join-Path $OutputDir "stop-printhub.ps1") -Force
+}
+
 function Get-DefaultRuntime {
     $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
 
@@ -60,6 +67,8 @@ dotnet publish $ProjectPath `
     --self-contained $SelfContained `
     -o $OutputDir
 
+Install-Launchers
+
 Write-Host ""
 Write-Host "Publish completed."
 Write-Host ""
@@ -74,4 +83,7 @@ Write-Host "Override this location with:"
 Write-Host "  PRINTHUB_HOME=C:\absolute\path"
 Write-Host ""
 Write-Host "Run the published app with:"
-Write-Host "  $OutputDir\PrintHub.Api.exe"
+Write-Host "  $OutputDir\run-printhub.ps1"
+Write-Host ""
+Write-Host "Stop the background service with:"
+Write-Host "  $OutputDir\stop-printhub.ps1"

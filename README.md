@@ -67,3 +67,24 @@ SELF_CONTAINED=false ./scripts/publish.sh
 ```powershell
 ./scripts/publish.ps1 -SelfContained false
 ```
+
+## Start the published app
+
+After publish, the output folder contains launcher scripts for the end user:
+
+- macOS/Linux: `run-printhub.sh` and `stop-printhub.sh`
+- Windows PowerShell: `run-printhub.ps1` and `stop-printhub.ps1`
+
+The launcher:
+
+- creates `PRINTHUB_HOME` if it does not exist
+- reads the saved `port` from `settings.json` when available
+- starts PrintHub in the background
+- waits for `/health`
+- opens the dashboard in the browser
+
+You can also override the startup URL manually:
+
+```bash
+PRINTHUB_URL=http://127.0.0.1:6060 ./run-printhub.sh
+```
