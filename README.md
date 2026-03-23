@@ -12,6 +12,12 @@ The local dashboard is served from:
 
 - `http://localhost:5051`
 
+On first launch the dashboard opens with a built-in onboarding flow:
+
+- generate or enter the API key
+- inspect detected local printers
+- choose the default printer for jobs without `printerName`
+
 ## Runtime data location
 
 By default PrintHub stores runtime data outside the build output:

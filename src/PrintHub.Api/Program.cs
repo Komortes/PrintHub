@@ -139,6 +139,18 @@ settingsApi.MapGet(string.Empty, async (IPrintHubSettingsService settingsService
 })
     .WithName("GetSettings");
 
+settingsApi.MapGet("/setup-status", async (
+    IPrintBackend backend,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    var settings = await settingsService.GetAsync(cancellationToken);
+    var printers = await backend.GetPrintersAsync(cancellationToken);
+
+    return TypedResults.Ok(ToSetupStatusDto(settings, printers));
+})
+    .WithName("GetSetupStatus");
+
 settingsApi.MapPut(string.Empty, async Task<IResult> (
     UpdatePrintHubSettingsRequest request,
     IPrintHubSettingsService settingsService,
@@ -160,6 +172,63 @@ settingsApi.MapPut(string.Empty, async Task<IResult> (
     }
 })
     .WithName("UpdateSettings");
+
+settingsApi.MapPost("/onboarding", async Task<IResult> (
+    CompleteOnboardingRequest request,
+    IPrintBackend backend,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var settings = await settingsService.GetAsync(cancellationToken);
+        IReadOnlyCollection<PrinterInfo>? printers = null;
+        var defaultPrinterName = settings.DefaultPrinterName;
+
+        if (!string.IsNullOrWhiteSpace(request.DefaultPrinterId))
+        {
+            printers = await backend.GetPrintersAsync(cancellationToken);
+            var printer = FindPrinter(printers, request.DefaultPrinterId);
+
+            if (printer is null)
+            {
+                return TypedResults.BadRequest(new ProblemDetails
+                {
+                    Title = "Invalid onboarding request",
+                    Detail = $"Printer '{request.DefaultPrinterId}' was not found.",
+                    Status = StatusCodes.Status400BadRequest
+                });
+            }
+
+            defaultPrinterName = printer.Name;
+        }
+
+        var updatedSettings = await settingsService.UpdateAsync(
+            new UpdatePrintHubSettingsRequest(
+                settings.ServiceName,
+                settings.Port,
+                settings.ApiKeyHeaderName,
+                request.ApiKey,
+                defaultPrinterName,
+                settings.StorageDirectory,
+                settings.MaxUploadSizeBytes),
+            cancellationToken);
+
+        printers ??= await backend.GetPrintersAsync(cancellationToken);
+
+        return TypedResults.Ok(ToSetupStatusDto(updatedSettings, printers));
+    }
+    catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+    {
+        return TypedResults.BadRequest(new ProblemDetails
+        {
+            Title = "Invalid onboarding request",
+            Detail = exception.Message,
+            Status = StatusCodes.Status400BadRequest
+        });
+    }
+})
+    .WithName("CompleteOnboarding");
 
 protectedApi.MapGet("/printers", async (
     IPrintBackend backend,
@@ -331,6 +400,24 @@ static PrintHubSettingsDto ToSettingsDto(PrintHubSettings settings) =>
         settings.StorageDirectory,
         settings.MaxUploadSizeBytes);
 
+static SetupStatusDto ToSetupStatusDto(
+    PrintHubSettings settings,
+    IReadOnlyCollection<PrinterInfo> printers)
+{
+    var printerDtos = printers
+        .Select(printer => ToDto(printer, settings.DefaultPrinterName))
+        .ToArray();
+    var hasApiKey = !string.IsNullOrWhiteSpace(settings.ApiKey);
+    var hasDefaultPrinter = HasResolvedDefaultPrinter(settings, printers);
+    var isOnboardingRequired = !hasApiKey || (printers.Count > 0 && !hasDefaultPrinter);
+
+    return new SetupStatusDto(
+        isOnboardingRequired,
+        hasApiKey,
+        hasDefaultPrinter,
+        printerDtos);
+}
+
 static bool IsDefaultPrinter(PrinterInfo printer, string? defaultPrinterName)
 {
     if (string.IsNullOrWhiteSpace(defaultPrinterName))
@@ -340,6 +427,18 @@ static bool IsDefaultPrinter(PrinterInfo printer, string? defaultPrinterName)
 
     return string.Equals(printer.Name, defaultPrinterName, StringComparison.OrdinalIgnoreCase)
         || string.Equals(printer.Id, defaultPrinterName, StringComparison.OrdinalIgnoreCase);
+}
+
+static bool HasResolvedDefaultPrinter(
+    PrintHubSettings settings,
+    IReadOnlyCollection<PrinterInfo> printers)
+{
+    if (printers.Count == 0)
+    {
+        return !string.IsNullOrWhiteSpace(settings.DefaultPrinterName);
+    }
+
+    return printers.Any(printer => IsDefaultPrinter(printer, settings.DefaultPrinterName));
 }
 
 static PrinterInfo? FindPrinter(IEnumerable<PrinterInfo> printers, string printerId)

@@ -71,6 +71,169 @@
       padding: 28px 20px 40px;
     }
 
+    body.setup-open {
+      overflow: hidden;
+    }
+
+    .setup-shell {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(31, 42, 51, 0.42);
+      backdrop-filter: blur(10px);
+      z-index: 980;
+    }
+
+    .setup-shell.visible {
+      display: flex;
+    }
+
+    .setup-card {
+      width: min(1040px, 100%);
+      border-radius: 30px;
+      overflow: hidden;
+      border: 1px solid rgba(35, 50, 61, 0.1);
+      box-shadow: 0 36px 120px rgba(24, 28, 31, 0.28);
+      background: rgba(255, 252, 247, 0.94);
+      backdrop-filter: blur(24px);
+    }
+
+    .setup-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+    }
+
+    .setup-intro {
+      padding: 34px;
+      background:
+        linear-gradient(180deg, rgba(31, 42, 51, 0.98), rgba(28, 38, 45, 0.94)),
+        radial-gradient(circle at top left, rgba(184, 92, 56, 0.28), transparent 46%);
+      color: #f8f5ef;
+    }
+
+    .setup-intro h2 {
+      margin: 18px 0 10px;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .setup-intro p {
+      margin: 0;
+      color: rgba(248, 245, 239, 0.78);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .setup-step-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .setup-step {
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .setup-step.ready {
+      border-color: rgba(74, 160, 113, 0.22);
+      background: rgba(74, 160, 113, 0.12);
+    }
+
+    .setup-step.waiting {
+      border-color: rgba(242, 192, 90, 0.2);
+      background: rgba(242, 192, 90, 0.08);
+    }
+
+    .setup-step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .setup-step-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .setup-step-copy {
+      margin: 0;
+      color: rgba(248, 245, 239, 0.74);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .setup-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .setup-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: rgba(248, 245, 239, 0.82);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .setup-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 34px;
+      background: rgba(255, 252, 247, 0.94);
+    }
+
+    .setup-panel h3 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .setup-panel p {
+      margin: 0;
+    }
+
+    .setup-inline-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .setup-note {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(184, 92, 56, 0.08);
+      border: 1px solid rgba(184, 92, 56, 0.12);
+      color: var(--muted-strong);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
     .glass-card,
     .card,
     .stat-card {
@@ -908,7 +1071,8 @@
       }
 
       .dashboard-grid,
-      .hero {
+      .hero,
+      .setup-body {
         grid-template-columns: 1fr;
       }
 
@@ -925,7 +1089,9 @@
       }
 
       .hero,
-      .card-body {
+      .card-body,
+      .setup-intro,
+      .setup-panel {
         padding: 18px;
       }
 
@@ -1232,6 +1398,86 @@
   </section>
 </div>
 
+<div id="setup-shell" class="setup-shell">
+  <div class="setup-card">
+    <div class="setup-body">
+      <section class="setup-intro">
+        <span class="eyebrow">First Run</span>
+        <h2>Подготовьте PrintHub к первой печати</h2>
+        <p>
+          Мастер первого запуска поможет задать API ключ, проверить локальные принтеры и
+          выбрать целевое устройство по умолчанию без ручной настройки через терминал.
+        </p>
+
+        <div class="setup-step-list">
+          <div id="setup-step-api" class="setup-step waiting">
+            <div class="setup-step-header">
+              <span class="setup-step-index">01</span>
+              <span id="setup-step-api-title">Добавить API ключ</span>
+            </div>
+            <p id="setup-step-api-copy" class="setup-step-copy">
+              Сохраните ключ, который будут использовать сайт, ERP или CRM для печати через локальный узел.
+            </p>
+          </div>
+
+          <div id="setup-step-printer" class="setup-step waiting">
+            <div class="setup-step-header">
+              <span class="setup-step-index">02</span>
+              <span id="setup-step-printer-title">Выбрать принтер</span>
+            </div>
+            <p id="setup-step-printer-copy" class="setup-step-copy">
+              Укажите устройство по умолчанию, чтобы новые задания уходили в правильную очередь печати.
+            </p>
+          </div>
+        </div>
+
+        <div class="setup-chip-row">
+          <span id="setup-chip-service" class="setup-chip">Сервис: PrintHub</span>
+          <span id="setup-chip-port" class="setup-chip">Порт: 5051</span>
+          <span id="setup-chip-printers" class="setup-chip">Принтеры: 0</span>
+        </div>
+      </section>
+
+      <section class="setup-panel">
+        <div>
+          <p class="section-label">Мастер первого запуска</p>
+          <h3>Быстрая настройка узла</h3>
+          <p class="card-subtitle" id="setup-summary-copy">
+            Настройте API ключ и принтер по умолчанию, чтобы PrintHub был готов к приёму заданий.
+          </p>
+        </div>
+
+        <div class="field">
+          <label>API ключ для интеграций</label>
+          <input type="text" id="onboarding-api-key-input" placeholder="printhub-...">
+          <p class="helper-text">Этот ключ понадобится внешним системам для доступа к защищённым endpoint-ам PrintHub.</p>
+        </div>
+
+        <div class="setup-inline-actions">
+          <button class="btn btn-sm btn-secondary" type="button" onclick="generateOnboardingApiKey()">Сгенерировать ключ</button>
+          <button class="btn btn-sm btn-secondary" type="button" onclick="refreshSetupStatus()">Обновить принтеры</button>
+        </div>
+
+        <div class="field">
+          <label>Принтер по умолчанию</label>
+          <select id="onboarding-printer-select">
+            <option value="">Авто / системный принтер</option>
+          </select>
+        </div>
+
+        <div id="onboarding-printer-note" class="setup-note">
+          PrintHub попробует определить системный принтер по умолчанию. При необходимости вы сможете изменить его позже на странице управления.
+        </div>
+
+        <div class="setup-inline-actions">
+          <button class="btn" id="setup-complete-btn" type="button" onclick="completeOnboarding()">Завершить настройку</button>
+          <button class="btn btn-sm btn-secondary" type="button" onclick="openAdvancedSettings()">Расширенные настройки</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1253,6 +1499,7 @@
 
   let apiKey = loadStoredApiKey();
   let currentSettings = null;
+  let setupStatus = null;
   let printersCache = [];
   let jobsCache = [];
   let activeTab = 'upload';
@@ -1264,6 +1511,7 @@
     document.getElementById('api-key-input').value = apiKey;
     await checkHealth();
     await loadSettings();
+    await loadSetupStatus();
     await loadPrinters();
     await loadJobs();
     startAutoRefresh();
@@ -1306,10 +1554,44 @@
       applySettingsToForm(currentSettings);
       updateSettingsSummary(currentSettings);
       showBanner(!currentSettings.apiKey);
+      syncOnboardingApiKeyInput();
     } catch {
       currentSettings = currentSettings || fallbackSettings();
       applySettingsToForm(currentSettings);
       updateSettingsSummary(currentSettings);
+      syncOnboardingApiKeyInput();
+    }
+  }
+
+  async function loadSetupStatus() {
+    try {
+      const response = await fetch('/settings/setup-status', { headers: authHeaders(resolveRequestApiKey()) });
+
+      if (!response.ok) {
+        setupStatus = buildFallbackSetupStatus();
+        applySetupStatus(setupStatus);
+        return;
+      }
+
+      setupStatus = await response.json();
+
+      if ((!apiKey || !setupStatus.hasApiKey) && Array.isArray(setupStatus.printers) && setupStatus.printers.length) {
+        printersCache = setupStatus.printers;
+        updatePrintersSummary(printersCache);
+      }
+
+      applySetupStatus(setupStatus);
+    } catch {
+      setupStatus = buildFallbackSetupStatus();
+      applySetupStatus(setupStatus);
+    }
+  }
+
+  async function refreshSetupStatus() {
+    await loadSetupStatus();
+
+    if (setupStatus?.hasApiKey) {
+      await loadPrinters();
     }
   }
 
@@ -1338,6 +1620,7 @@
       applySettingsToForm(currentSettings);
       updateSettingsSummary(currentSettings);
       showBanner(!apiKey);
+      await loadSetupStatus();
       showToast('Настройки сохранены');
       await checkHealth();
       await loadPrinters();
@@ -1360,6 +1643,12 @@
     panel.classList.add('open');
     toggle.textContent = 'Свернуть';
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function openAdvancedSettings() {
+    document.getElementById('setup-shell').classList.remove('visible');
+    document.body.classList.remove('setup-open');
+    openSettings();
   }
 
   function showBanner(show) {
@@ -1442,6 +1731,7 @@
       const printer = await response.json();
       currentSettings = { ...(currentSettings || fallbackSettings()), defaultPrinterName: printer.name };
       updateSettingsSummary(currentSettings);
+      await loadSetupStatus();
       showToast(`Принтер по умолчанию: ${printer.name}`);
       await loadPrinters();
     } catch (error) {
@@ -1468,6 +1758,224 @@
     } catch (error) {
       showToast(`Ошибка: ${error.message}`, true);
     }
+  }
+
+  async function completeOnboarding() {
+    const button = document.getElementById('setup-complete-btn');
+    const apiKeyInput = document.getElementById('onboarding-api-key-input');
+    const printerSelect = document.getElementById('onboarding-printer-select');
+    const onboardingApiKey = apiKeyInput.value.trim();
+    const printers = Array.isArray(setupStatus?.printers) ? setupStatus.printers : [];
+    const defaultPrinterId = printerSelect.value || null;
+    const hasDetectedDefaultPrinter = printers.some(printer => printer.isDefault);
+
+    if (!onboardingApiKey) {
+      showToast('Сначала задайте API ключ для PrintHub', true);
+      apiKeyInput.focus();
+      return;
+    }
+
+    if (printers.length > 0 && !defaultPrinterId && !hasDetectedDefaultPrinter) {
+      showToast('Выберите принтер по умолчанию или настройте системный default принтер', true);
+      printerSelect.focus();
+      return;
+    }
+
+    button.disabled = true;
+
+    try {
+      const response = await fetch('/settings/onboarding', {
+        method: 'POST',
+        headers: {
+          ...authHeaders(resolveRequestApiKey()),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          apiKey: onboardingApiKey,
+          defaultPrinterId
+        })
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось завершить первый запуск', true);
+        return;
+      }
+
+      setupStatus = await response.json();
+      apiKey = onboardingApiKey;
+      persistApiKey(apiKey);
+      document.getElementById('api-key-input').value = apiKey;
+
+      await loadSettings();
+      applySetupStatus(setupStatus);
+      await checkHealth();
+      await loadPrinters();
+      await loadJobs();
+      showToast('PrintHub готов к первой интеграции');
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function buildFallbackSetupStatus() {
+    const printers = Array.isArray(printersCache) ? printersCache : [];
+    const hasApiKey = Boolean(currentSettings?.apiKey || apiKey);
+    const hasDefaultPrinter = printers.some(printer => printer.isDefault) || Boolean(currentSettings?.defaultPrinterName);
+
+    return {
+      isOnboardingRequired: !hasApiKey || (printers.length > 0 && !hasDefaultPrinter),
+      hasApiKey,
+      hasDefaultPrinter,
+      printers
+    };
+  }
+
+  function applySetupStatus(status) {
+    const next = status || buildFallbackSetupStatus();
+    const printers = Array.isArray(next.printers) ? next.printers : [];
+    const settings = currentSettings || fallbackSettings();
+    const shell = document.getElementById('setup-shell');
+    setupStatus = next;
+    const printerReady = printers.length === 0 || next.hasDefaultPrinter;
+    const detectedDefaultPrinter = printers.find(printer => printer.isDefault)?.name
+      || currentSettings?.defaultPrinterName
+      || 'системный принтер';
+
+    document.getElementById('setup-chip-service').textContent = `Сервис: ${settings.serviceName || 'PrintHub'}`;
+    document.getElementById('setup-chip-port').textContent = `Порт: ${settings.port || 5051}`;
+    document.getElementById('setup-chip-printers').textContent = `Принтеры: ${printers.length}`;
+
+    setSetupStep(
+      'setup-step-api',
+      next.hasApiKey,
+      'setup-step-api-title',
+      'setup-step-api-copy',
+      'API ключ готов',
+      'Защищённые endpoint-ы уже принимают запросы только с сохранённым ключом.',
+      'Добавить API ключ',
+      'Сохраните ключ, который будут использовать сайт, ERP или CRM для печати через локальный узел.');
+
+    setSetupStep(
+      'setup-step-printer',
+      printerReady,
+      'setup-step-printer-title',
+      'setup-step-printer-copy',
+      printers.length
+        ? 'Принтер по умолчанию готов'
+        : 'Принтеры можно подключить позже',
+      printers.length
+        ? `PrintHub будет отправлять задания на: ${detectedDefaultPrinter}.`
+        : 'Сервис пока не нашёл локальных принтеров, поэтому этот шаг можно закончить позже.',
+      'Выбрать принтер',
+      'Укажите устройство по умолчанию, чтобы новые задания уходили в правильную очередь печати.');
+
+    document.getElementById('setup-summary-copy').textContent = resolveSetupSummary(next, printers);
+
+    if (printers.length === 0) {
+      document.getElementById('onboarding-printer-note').textContent =
+        'Локальные принтеры пока не обнаружены. Завершите setup с API ключом и подключите принтер позже, когда устройство появится в системе.';
+    } else if (next.hasDefaultPrinter) {
+      document.getElementById('onboarding-printer-note').textContent =
+        `Текущий принтер по умолчанию: ${detectedDefaultPrinter}. При необходимости вы можете выбрать другое устройство прямо сейчас.`;
+    } else {
+      document.getElementById('onboarding-printer-note').textContent =
+        'Выберите принтер по умолчанию, чтобы задания без `printerName` не уходили в неопределённую очередь.';
+    }
+
+    renderOnboardingPrinterSelect(printers);
+    syncOnboardingApiKeyInput(next.hasApiKey ? (currentSettings?.apiKey || apiKey || '') : '');
+
+    shell.classList.toggle('visible', Boolean(next.isOnboardingRequired));
+    document.body.classList.toggle('setup-open', Boolean(next.isOnboardingRequired));
+  }
+
+  function setSetupStep(stepId, isReady, titleId, copyId, readyTitle, readyCopy, waitingTitle, waitingCopy) {
+    const step = document.getElementById(stepId);
+    step.classList.toggle('ready', Boolean(isReady));
+    step.classList.toggle('waiting', !isReady);
+    document.getElementById(titleId).textContent = isReady ? readyTitle : waitingTitle;
+    document.getElementById(copyId).textContent = isReady ? readyCopy : waitingCopy;
+  }
+
+  function resolveSetupSummary(status, printers) {
+    if (!status.hasApiKey) {
+      return 'Сначала сохраните API ключ. После этого PrintHub начнёт принимать защищённые запросы от сайта или CRM.';
+    }
+
+    if (printers.length > 0 && !status.hasDefaultPrinter) {
+      return 'API ключ уже настроен. Осталось выбрать принтер по умолчанию и узел будет готов к первой печати.';
+    }
+
+    if (printers.length === 0) {
+      return 'API ключ уже сохранён. Принтеры пока не обнаружены, поэтому можно закончить setup и подключить устройство позже.';
+    }
+
+    return 'Все основные шаги завершены. Можно закрывать мастер и переходить к тестовой печати.';
+  }
+
+  function renderOnboardingPrinterSelect(printers) {
+    const select = document.getElementById('onboarding-printer-select');
+    const detectedDefaultPrinter = printers.find(printer => printer.isDefault)?.name;
+    const configuredDefaultPrinterId = resolveConfiguredDefaultPrinterId(printers);
+    const placeholder = detectedDefaultPrinter
+      ? `Авто / ${detectedDefaultPrinter}`
+      : 'Выберите принтер';
+
+    select.innerHTML = `<option value="">${esc(placeholder)}</option>` +
+      printers.map(printer => `<option value="${escAttr(printer.id)}">${esc(printer.name)}</option>`).join('');
+
+    select.value = configuredDefaultPrinterId;
+  }
+
+  function resolveConfiguredDefaultPrinterId(printers) {
+    const configuredDefaultPrinter = currentSettings?.defaultPrinterName;
+
+    if (!configuredDefaultPrinter) {
+      return '';
+    }
+
+    const printer = printers.find(candidate =>
+      String(candidate.id || '').toLowerCase() === String(configuredDefaultPrinter).toLowerCase() ||
+      String(candidate.name || '').toLowerCase() === String(configuredDefaultPrinter).toLowerCase());
+
+    return printer?.id || '';
+  }
+
+  function syncOnboardingApiKeyInput(preferredValue = '') {
+    const input = document.getElementById('onboarding-api-key-input');
+
+    if (!input) {
+      return;
+    }
+
+    if (preferredValue) {
+      input.value = preferredValue;
+      return;
+    }
+
+    if (input.value.trim()) {
+      return;
+    }
+
+    input.value = apiKey || currentSettings?.apiKey || generateSuggestedApiKey();
+  }
+
+  function generateOnboardingApiKey() {
+    const input = document.getElementById('onboarding-api-key-input');
+    input.value = generateSuggestedApiKey();
+    input.focus();
+    input.select();
+  }
+
+  function generateSuggestedApiKey() {
+    if (window.crypto?.randomUUID) {
+      return `printhub-${window.crypto.randomUUID()}`;
+    }
+
+    return `printhub-${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
   }
 
   async function loadJobs() {
