@@ -94,3 +94,32 @@ You can also override the startup URL manually:
 ```bash
 PRINTHUB_URL=http://127.0.0.1:6060 ./run-printhub.sh
 ```
+
+## Install for a regular user
+
+The publish output now also contains install and uninstall scripts:
+
+- macOS/Linux: `install-printhub.sh` and `uninstall-printhub.sh`
+- Windows PowerShell: `install-printhub.ps1` and `uninstall-printhub.ps1`
+
+Default install targets:
+
+- macOS: `~/Applications/PrintHub.app`
+- Linux: `~/.local/opt/PrintHub`
+- Windows: `%LOCALAPPDATA%\Programs\PrintHub`
+
+On macOS the publish output also includes double-clickable `.command` wrappers:
+
+- `install-printhub.command`
+- `run-printhub.command`
+- `stop-printhub.command`
+
+After install on macOS you get:
+
+- `~/Applications/PrintHub.app`
+- `~/Applications/Stop PrintHub.command`
+- `~/Applications/Uninstall PrintHub.command`
+
+On Windows the installer also creates Start Menu shortcuts for start, stop and uninstall.
+
+The installer works in user space and does not require admin rights.

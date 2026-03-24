@@ -10,11 +10,19 @@ $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $ProjectPath = Join-Path $RootDir "src/PrintHub.Api/PrintHub.Api.csproj"
 
-function Install-Launchers {
+function Install-SupportScripts {
     Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.sh") (Join-Path $OutputDir "run-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.sh") (Join-Path $OutputDir "stop-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.ps1") (Join-Path $OutputDir "run-printhub.ps1") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.ps1") (Join-Path $OutputDir "stop-printhub.ps1") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.command") (Join-Path $OutputDir "run-printhub.command") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.command") (Join-Path $OutputDir "stop-printhub.command") -Force
+    Copy-Item (Join-Path $RootDir "scripts/installers/install-printhub.sh") (Join-Path $OutputDir "install-printhub.sh") -Force
+    Copy-Item (Join-Path $RootDir "scripts/installers/uninstall-printhub.sh") (Join-Path $OutputDir "uninstall-printhub.sh") -Force
+    Copy-Item (Join-Path $RootDir "scripts/installers/install-printhub.ps1") (Join-Path $OutputDir "install-printhub.ps1") -Force
+    Copy-Item (Join-Path $RootDir "scripts/installers/uninstall-printhub.ps1") (Join-Path $OutputDir "uninstall-printhub.ps1") -Force
+    Copy-Item (Join-Path $RootDir "scripts/installers/install-printhub.command") (Join-Path $OutputDir "install-printhub.command") -Force
+    Copy-Item (Join-Path $RootDir "scripts/installers/uninstall-printhub.command") (Join-Path $OutputDir "uninstall-printhub.command") -Force
 }
 
 function Get-DefaultRuntime {
@@ -67,7 +75,7 @@ dotnet publish $ProjectPath `
     --self-contained $SelfContained `
     -o $OutputDir
 
-Install-Launchers
+Install-SupportScripts
 
 Write-Host ""
 Write-Host "Publish completed."
@@ -87,3 +95,6 @@ Write-Host "  $OutputDir\run-printhub.ps1"
 Write-Host ""
 Write-Host "Stop the background service with:"
 Write-Host "  $OutputDir\stop-printhub.ps1"
+Write-Host ""
+Write-Host "Install for the current user with:"
+Write-Host "  $OutputDir\install-printhub.ps1"
