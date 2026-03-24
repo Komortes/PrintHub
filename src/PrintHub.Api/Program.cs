@@ -10,6 +10,7 @@ using PrintHub.Contracts.Settings;
 using PrintHub.Core.Backends;
 using PrintHub.Core.Documents;
 using PrintHub.Core.Models;
+using PrintHub.Core.Platform;
 using PrintHub.Core.Queues;
 using PrintHub.Core.Repositories;
 using PrintHub.Core.Settings;
@@ -17,6 +18,7 @@ using PrintHub.Core.Services;
 using PrintHub.Infrastructure.Backends;
 using PrintHub.Infrastructure.Documents;
 using PrintHub.Infrastructure.Paths;
+using PrintHub.Infrastructure.Platform;
 using PrintHub.Infrastructure.Repositories;
 using PrintHub.Infrastructure.Settings;
 using Microsoft.AspNetCore.Mvc;
@@ -99,6 +101,18 @@ builder.Services.AddSingleton<IPrintHubSettingsService>(serviceProvider =>
         serviceProvider.GetRequiredService<IPrintHubSettingsStore>(),
         defaults);
 });
+builder.Services.AddSingleton<IAutoStartService>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
+
+    return new PlatformAutoStartService(
+        AppContext.BaseDirectory,
+        options.AutoStartUnixLauncherPath,
+        options.AutoStartWindowsLauncherPath,
+        options.AutoStartMacOsLaunchAgentsDirectoryPath,
+        options.AutoStartLinuxDirectoryPath,
+        options.AutoStartWindowsDirectoryPath);
+});
 builder.Services.AddHttpClient<IPrintDocumentPipeline, FileSystemPrintDocumentPipeline>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -139,6 +153,15 @@ settingsApi.MapGet(string.Empty, async (IPrintHubSettingsService settingsService
 })
     .WithName("GetSettings");
 
+settingsApi.MapGet("/auto-start", async (
+    IAutoStartService autoStartService,
+    CancellationToken cancellationToken) =>
+{
+    var status = await autoStartService.GetStatusAsync(cancellationToken);
+    return TypedResults.Ok(ToAutoStartDto(status));
+})
+    .WithName("GetAutoStartStatus");
+
 settingsApi.MapGet("/setup-status", async (
     IPrintBackend backend,
     IPrintHubSettingsService settingsService,
@@ -172,6 +195,28 @@ settingsApi.MapPut(string.Empty, async Task<IResult> (
     }
 })
     .WithName("UpdateSettings");
+
+settingsApi.MapPut("/auto-start", async Task<IResult> (
+    UpdateAutoStartRequest request,
+    IAutoStartService autoStartService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var status = await autoStartService.SetEnabledAsync(request.Enabled, cancellationToken);
+        return TypedResults.Ok(ToAutoStartDto(status));
+    }
+    catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+    {
+        return TypedResults.BadRequest(new ProblemDetails
+        {
+            Title = "Invalid auto-start request",
+            Detail = exception.Message,
+            Status = StatusCodes.Status400BadRequest
+        });
+    }
+})
+    .WithName("UpdateAutoStart");
 
 settingsApi.MapPost("/onboarding", async Task<IResult> (
     CompleteOnboardingRequest request,
@@ -417,6 +462,13 @@ static SetupStatusDto ToSetupStatusDto(
         hasDefaultPrinter,
         printerDtos);
 }
+
+static AutoStartStatusDto ToAutoStartDto(AutoStartRegistration registration) =>
+    new(
+        registration.IsSupported,
+        registration.IsEnabled,
+        registration.Provider,
+        registration.EntryPath);
 
 static bool IsDefaultPrinter(PrinterInfo printer, string? defaultPrinterName)
 {

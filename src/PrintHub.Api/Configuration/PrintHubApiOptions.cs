@@ -31,4 +31,14 @@ public sealed class PrintHubApiOptions
     public int Port { get; set; } = DefaultPort;
 
     public PrintBackendMode BackendMode { get; set; } = DefaultBackendMode;
+
+    public string? AutoStartUnixLauncherPath { get; set; }
+
+    public string? AutoStartWindowsLauncherPath { get; set; }
+
+    public string? AutoStartMacOsLaunchAgentsDirectoryPath { get; set; }
+
+    public string? AutoStartLinuxDirectoryPath { get; set; }
+
+    public string? AutoStartWindowsDirectoryPath { get; set; }
 }

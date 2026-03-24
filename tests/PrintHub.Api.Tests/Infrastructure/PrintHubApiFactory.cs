@@ -32,6 +32,15 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
             var jobsFilePath = Path.Combine(_tempRootPath, "jobs.json");
             var storageDirectory = Path.Combine(_tempRootPath, "documents");
             var logsDirectory = Path.Combine(_tempRootPath, "logs");
+            var autoStartUnixLauncherPath = Path.Combine(_tempRootPath, "run-printhub.sh");
+            var autoStartWindowsLauncherPath = Path.Combine(_tempRootPath, "run-printhub.ps1");
+            var autoStartMacOsLaunchAgentsDirectoryPath = Path.Combine(_tempRootPath, "launch-agents");
+            var autoStartLinuxDirectoryPath = Path.Combine(_tempRootPath, "autostart");
+            var autoStartWindowsDirectoryPath = Path.Combine(_tempRootPath, "startup");
+
+            Directory.CreateDirectory(_tempRootPath);
+            File.WriteAllText(autoStartUnixLauncherPath, "#!/usr/bin/env bash\nexit 0\n");
+            File.WriteAllText(autoStartWindowsLauncherPath, "exit 0\n");
 
             var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
             {
@@ -44,6 +53,11 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
                 ["PrintHub:StorageDirectory"] = storageDirectory,
                 ["PrintHub:MaxUploadSizeBytes"] = "10485760",
                 ["PrintHub:MaxMultipartBodySizeBytes"] = "104857600",
+                ["PrintHub:AutoStartUnixLauncherPath"] = autoStartUnixLauncherPath,
+                ["PrintHub:AutoStartWindowsLauncherPath"] = autoStartWindowsLauncherPath,
+                ["PrintHub:AutoStartMacOsLaunchAgentsDirectoryPath"] = autoStartMacOsLaunchAgentsDirectoryPath,
+                ["PrintHub:AutoStartLinuxDirectoryPath"] = autoStartLinuxDirectoryPath,
+                ["PrintHub:AutoStartWindowsDirectoryPath"] = autoStartWindowsDirectoryPath,
                 ["PrintHub:FileLogging:Enabled"] = "false",
                 ["PrintHub:FileLogging:DirectoryPath"] = logsDirectory
             };

@@ -123,3 +123,15 @@ After install on macOS you get:
 On Windows the installer also creates Start Menu shortcuts for start, stop and uninstall.
 
 The installer works in user space and does not require admin rights.
+
+## Auto-start
+
+After install, auto-start can be enabled from the local dashboard in `Settings`.
+
+PrintHub configures user-level startup only:
+
+- macOS: LaunchAgent in `~/Library/LaunchAgents`
+- Linux: desktop autostart entry in `~/.config/autostart`
+- Windows: Startup folder entry for the current user
+
+Auto-start uses the packaged launcher scripts, so it keeps the saved port and runtime home behavior.

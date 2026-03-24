@@ -685,6 +685,59 @@
       line-height: 1.55;
     }
 
+    .integration-panel {
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      background: rgba(35, 50, 61, 0.04);
+      border: 1px solid rgba(35, 50, 61, 0.08);
+    }
+
+    .integration-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .integration-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .integration-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(35, 50, 61, 0.08);
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .integration-status.enabled {
+      color: var(--green);
+      background: rgba(46, 108, 85, 0.08);
+      border-color: rgba(46, 108, 85, 0.18);
+    }
+
+    .integration-status.disabled {
+      color: var(--yellow);
+      background: rgba(175, 111, 16, 0.08);
+      border-color: rgba(175, 111, 16, 0.18);
+    }
+
+    .integration-status.unsupported {
+      color: var(--red);
+      background: rgba(179, 63, 63, 0.08);
+      border-color: rgba(179, 63, 63, 0.18);
+    }
+
     .tabs {
       display: inline-grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1255,6 +1308,20 @@
               <input type="text" id="storage-directory-input" placeholder="data/documents">
             </div>
 
+            <div class="integration-panel">
+              <div class="integration-heading">
+                <div>
+                  <p class="integration-title">Автозапуск PrintHub</p>
+                  <p class="helper-text" id="autostart-provider-text">Проверка platform integration...</p>
+                </div>
+                <span id="autostart-status-pill" class="integration-status">Проверка</span>
+              </div>
+              <p class="helper-text" id="autostart-entry-text">Состояние автозапуска ещё не загружено.</p>
+              <div class="btn-row" style="margin-top: 14px;">
+                <button class="btn btn-secondary" id="autostart-toggle-btn" type="button" onclick="toggleAutoStart()">Загрузка...</button>
+              </div>
+            </div>
+
             <div class="btn-row">
               <button class="btn" type="button" onclick="saveSettings()">Сохранить настройки</button>
             </div>
@@ -1500,6 +1567,7 @@
   let apiKey = loadStoredApiKey();
   let currentSettings = null;
   let setupStatus = null;
+  let autoStartStatus = null;
   let printersCache = [];
   let jobsCache = [];
   let activeTab = 'upload';
@@ -1511,6 +1579,7 @@
     document.getElementById('api-key-input').value = apiKey;
     await checkHealth();
     await loadSettings();
+    await loadAutoStartStatus();
     await loadSetupStatus();
     await loadPrinters();
     await loadJobs();
@@ -1587,6 +1656,24 @@
     }
   }
 
+  async function loadAutoStartStatus() {
+    try {
+      const response = await fetch('/settings/auto-start', { headers: authHeaders(resolveRequestApiKey()) });
+
+      if (!response.ok) {
+        autoStartStatus = null;
+        updateAutoStartSummary(null);
+        return;
+      }
+
+      autoStartStatus = await response.json();
+      updateAutoStartSummary(autoStartStatus);
+    } catch {
+      autoStartStatus = null;
+      updateAutoStartSummary(null);
+    }
+  }
+
   async function refreshSetupStatus() {
     await loadSetupStatus();
 
@@ -1619,6 +1706,7 @@
       persistApiKey(apiKey);
       applySettingsToForm(currentSettings);
       updateSettingsSummary(currentSettings);
+      await loadAutoStartStatus();
       showBanner(!apiKey);
       await loadSetupStatus();
       showToast('Настройки сохранены');
@@ -1627,6 +1715,38 @@
       await loadJobs();
     } catch (error) {
       showToast(`Ошибка: ${error.message}`, true);
+    }
+  }
+
+  async function toggleAutoStart() {
+    const button = document.getElementById('autostart-toggle-btn');
+    const nextEnabled = !(autoStartStatus?.isEnabled);
+
+    button.disabled = true;
+
+    try {
+      const response = await fetch('/settings/auto-start', {
+        method: 'PUT',
+        headers: {
+          ...authHeaders(resolveRequestApiKey()),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ enabled: nextEnabled })
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось изменить автозапуск', true);
+        return;
+      }
+
+      autoStartStatus = await response.json();
+      updateAutoStartSummary(autoStartStatus);
+      showToast(nextEnabled ? 'Автозапуск включён' : 'Автозапуск отключён');
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    } finally {
+      button.disabled = false;
     }
   }
 
@@ -1809,6 +1929,7 @@
 
       await loadSettings();
       applySetupStatus(setupStatus);
+      await loadAutoStartStatus();
       await checkHealth();
       await loadPrinters();
       await loadJobs();
@@ -2242,6 +2363,42 @@
       `Поддерживается PDF. Текущий лимит: ${formatBytes(next.maxUploadSizeBytes || 10485760)}.`;
   }
 
+  function updateAutoStartSummary(status) {
+    const pill = document.getElementById('autostart-status-pill');
+    const provider = document.getElementById('autostart-provider-text');
+    const entry = document.getElementById('autostart-entry-text');
+    const button = document.getElementById('autostart-toggle-btn');
+
+    if (!status) {
+      pill.className = 'integration-status unsupported';
+      pill.textContent = 'Недоступно';
+      provider.textContent = 'Статус автозапуска пока недоступен из текущей сессии.';
+      entry.textContent = 'Проверьте API ключ или сохраните настройки, чтобы повторить запрос.';
+      button.disabled = true;
+      button.textContent = 'Недоступно';
+      return;
+    }
+
+    if (!status.isSupported) {
+      pill.className = 'integration-status unsupported';
+      pill.textContent = 'Недоступно';
+      provider.textContent = `Текущий режим запуска не поддерживает настройку через ${autoStartProviderLabel(status.provider)}.`;
+      entry.textContent = 'Для автозапуска используйте self-contained publish или установленный пользовательский пакет.';
+      button.disabled = true;
+      button.textContent = 'Недоступно';
+      return;
+    }
+
+    pill.className = `integration-status ${status.isEnabled ? 'enabled' : 'disabled'}`;
+    pill.textContent = status.isEnabled ? 'Включён' : 'Выключен';
+    provider.textContent = `Провайдер автозапуска: ${autoStartProviderLabel(status.provider)}.`;
+    entry.textContent = status.entryPath
+      ? `Файл регистрации: ${status.entryPath}`
+      : 'Путь регистрации не определён.';
+    button.disabled = false;
+    button.textContent = status.isEnabled ? 'Отключить автозапуск' : 'Включить автозапуск';
+  }
+
   function updatePrintersSummary(printers) {
     const count = printers.length;
     const defaultPrinter = printers.find(printer => printer.isDefault)?.name
@@ -2337,6 +2494,19 @@
 
   function printerStatusLabel(status) {
     return PRINTER_STATUS_LABELS[normalizeStatus(status)] || String(status || 'unknown');
+  }
+
+  function autoStartProviderLabel(provider) {
+    switch (String(provider || '').toLowerCase()) {
+      case 'launch-agent':
+        return 'macOS LaunchAgent';
+      case 'startup-folder':
+        return 'Windows Startup folder';
+      case 'desktop-autostart':
+        return 'Linux desktop autostart';
+      default:
+        return provider || 'неизвестный провайдер';
+    }
   }
 
   function fmtTime(iso) {
