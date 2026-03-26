@@ -73,4 +73,168 @@ public sealed class PrintJobService : IPrintJobService
         var jobs = await _store.ListAsync(cancellationToken);
         return jobs.Select(job => job.ToDto()).ToArray();
     }
+
+    public ValueTask<PrintQueueStatusDto> GetQueueStatusAsync(
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(new PrintQueueStatusDto(_queue.IsPaused, _queue.Count));
+    }
+
+    public async ValueTask<PrintQueueStatusDto> PauseQueueAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _queue.PauseAsync(cancellationToken);
+        return new PrintQueueStatusDto(_queue.IsPaused, _queue.Count);
+    }
+
+    public async ValueTask<PrintQueueStatusDto> ResumeQueueAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _queue.ResumeAsync(cancellationToken);
+        return new PrintQueueStatusDto(_queue.IsPaused, _queue.Count);
+    }
+
+    public async ValueTask<ClearPrintQueueResponse> ClearQueueAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var wasPaused = _queue.IsPaused;
+        await _queue.PauseAsync(cancellationToken);
+
+        try
+        {
+            var queuedJobIds = await _queue.DrainAsync(cancellationToken);
+            var canceledCount = 0;
+
+            foreach (var jobId in queuedJobIds.Distinct(StringComparer.Ordinal))
+            {
+                var job = await _store.GetAsync(jobId, cancellationToken);
+
+                if (job is null || job.Status != PrintJobStatus.Pending)
+                {
+                    continue;
+                }
+
+                if (!job.TryMarkCanceled(_timeProvider.GetUtcNow(), "Cleared from queue by user."))
+                {
+                    continue;
+                }
+
+                await _store.UpdateAsync(job, cancellationToken);
+                canceledCount++;
+            }
+
+            return new ClearPrintQueueResponse(canceledCount);
+        }
+        finally
+        {
+            if (!wasPaused)
+            {
+                await _queue.ResumeAsync(cancellationToken);
+            }
+        }
+    }
+
+    public async ValueTask<PrintJobDto?> DeleteAsync(
+        string jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var job = await _store.GetAsync(jobId, cancellationToken);
+
+        if (job is null)
+        {
+            return null;
+        }
+
+        if (!IsFinished(job.Status))
+        {
+            throw new InvalidOperationException(
+                $"Print job '{job.Id}' cannot be deleted from status '{job.Status}'. Only completed, failed, or canceled jobs can be deleted.");
+        }
+
+        var deleted = await _store.DeleteAsync(job.Id, cancellationToken);
+        return deleted ? job.ToDto() : null;
+    }
+
+    public async ValueTask<CleanupPrintJobsResponse> CleanupAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var jobs = await _store.ListAsync(cancellationToken);
+        var deletedCount = 0;
+
+        foreach (var job in jobs.Where(job => IsFinished(job.Status)))
+        {
+            if (await _store.DeleteAsync(job.Id, cancellationToken))
+            {
+                deletedCount++;
+            }
+        }
+
+        return new CleanupPrintJobsResponse(deletedCount);
+    }
+
+    public async ValueTask<PrintJobDto?> CancelAsync(
+        string jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var job = await _store.GetAsync(jobId, cancellationToken);
+
+        if (job is null)
+        {
+            return null;
+        }
+
+        if (job.Status != PrintJobStatus.Pending)
+        {
+            throw new InvalidOperationException(
+                $"Print job '{job.Id}' cannot be canceled from status '{job.Status}'. Only pending jobs can be canceled.");
+        }
+
+        if (!job.TryMarkCanceled(_timeProvider.GetUtcNow(), "Canceled by user."))
+        {
+            throw new InvalidOperationException($"Print job '{job.Id}' could not be canceled.");
+        }
+
+        await _store.UpdateAsync(job, cancellationToken);
+        return job.ToDto();
+    }
+
+    public async ValueTask<CreatePrintJobResponse?> RetryAsync(
+        string jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var job = await _store.GetAsync(jobId, cancellationToken);
+
+        if (job is null)
+        {
+            return null;
+        }
+
+        if (job.Status is PrintJobStatus.Pending or PrintJobStatus.Processing)
+        {
+            throw new InvalidOperationException(
+                $"Print job '{job.Id}' cannot be retried from status '{job.Status}'. Wait until it finishes or cancel it first.");
+        }
+
+        if (!File.Exists(job.Document.StoredPath))
+        {
+            throw new InvalidOperationException(
+                $"Prepared document file '{job.Document.StoredPath}' is no longer available for retry.");
+        }
+
+        var retryJob = PrintJob.Create(
+            Guid.NewGuid().ToString("n"),
+            job.PrinterName,
+            job.Copies,
+            job.Document,
+            _timeProvider.GetUtcNow());
+
+        await _store.AddAsync(retryJob, cancellationToken);
+        await _queue.EnqueueAsync(retryJob.Id, cancellationToken);
+
+        return new CreatePrintJobResponse(retryJob.Id, retryJob.Status);
+    }
+
+    private static bool IsFinished(PrintJobStatus status) =>
+        status is PrintJobStatus.Completed or PrintJobStatus.Failed or PrintJobStatus.Canceled;
 }

@@ -28,6 +28,23 @@ install_support_scripts() {
     "$OUTPUT_DIR/uninstall-printhub.command"
 }
 
+build_macos_tray_if_available() {
+  case "$RUNTIME" in
+    osx-*)
+      ;;
+    *)
+      return
+      ;;
+  esac
+
+  if ! command -v swiftc >/dev/null 2>&1; then
+    echo "Skipping macOS tray build: swiftc is not available."
+    return
+  fi
+
+  bash "$ROOT_DIR/scripts/tray/macos/build-printhub-tray.sh" "$OUTPUT_DIR"
+}
+
 detect_runtime() {
   local os arch
   os="$(uname -s)"
@@ -72,6 +89,7 @@ dotnet publish "$PROJECT_PATH" \
   -o "$OUTPUT_DIR"
 
 install_support_scripts
+build_macos_tray_if_available
 
 cat <<EOF
 
@@ -99,4 +117,7 @@ Install for the current user with:
 
 On macOS you can also double-click:
   $OUTPUT_DIR/install-printhub.command
+
+If the tray helper was built, the publish folder also contains:
+  $OUTPUT_DIR/PrintHub Tray.app
 EOF

@@ -20,13 +20,16 @@ uninstall_macos() {
   local install_dir="${1:-${INSTALL_ROOT:-$HOME/Applications/PrintHub.app}}"
   local launchers_dir
   launchers_dir="$(cd "$(dirname "$install_dir")" && pwd)"
+  local tray_install_dir="$launchers_dir/PrintHub Tray.app"
 
   rm -rf "$install_dir"
+  rm -rf "$tray_install_dir"
   rm -f "$launchers_dir/Stop PrintHub.command"
   rm -f "$launchers_dir/Uninstall PrintHub.command"
 
   echo "PrintHub was removed from:"
   echo "  $install_dir"
+  echo "  $tray_install_dir (if installed)"
 }
 
 uninstall_linux() {

@@ -29,7 +29,7 @@ public sealed class PrintHubApiFactory : WebApplicationFactory<Program>
         builder.ConfigureAppConfiguration((_, configBuilder) =>
         {
             var settingsFilePath = Path.Combine(_tempRootPath, "settings.json");
-            var jobsFilePath = Path.Combine(_tempRootPath, "jobs.json");
+            var jobsFilePath = Path.Combine(_tempRootPath, "jobs.db");
             var storageDirectory = Path.Combine(_tempRootPath, "documents");
             var logsDirectory = Path.Combine(_tempRootPath, "logs");
             var autoStartUnixLauncherPath = Path.Combine(_tempRootPath, "run-printhub.sh");

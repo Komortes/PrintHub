@@ -59,8 +59,7 @@ Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}
 
 {
-  "apiKey": "dev-local-api-key",
-  "defaultPrinterId": "printer_1"
+  "apiKey": "dev-local-api-key"
 }
 
 ###
@@ -95,6 +94,30 @@ X-PrintHub-Api-Key: {{ApiKey}}
 
 ###
 
+GET {{PrintHub.Api_HostAddress}}/print-jobs/queue
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs/queue/pause
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs/queue/resume
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs/queue/clear
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
 POST {{PrintHub.Api_HostAddress}}/print-jobs
 Content-Type: application/json
 Accept: application/json
@@ -113,6 +136,30 @@ X-PrintHub-Api-Key: {{ApiKey}}
 ###
 
 GET {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+DELETE {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}/cancel
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}/retry
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+POST {{PrintHub.Api_HostAddress}}/print-jobs/cleanup
 Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}
 

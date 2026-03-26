@@ -48,6 +48,32 @@ public sealed class JsonPrintJobStore : IPrintJobStore
         }
     }
 
+    public async ValueTask<bool> DeleteAsync(string jobId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(jobId))
+        {
+            throw new ArgumentException("Job ID is required.", nameof(jobId));
+        }
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var jobs = await EnsureLoadedAsync(cancellationToken);
+
+            if (!jobs.Remove(jobId.Trim()))
+            {
+                return false;
+            }
+
+            await SaveAsync(jobs.Values, cancellationToken);
+            return true;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async ValueTask<PrintJob?> GetAsync(string jobId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobId))

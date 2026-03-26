@@ -60,7 +60,7 @@ builder.Services.AddSingleton<IPrintJobStore>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<PrintHubApiOptions>>().Value;
     var paths = serviceProvider.GetRequiredService<PrintHubAppDataPaths>();
-    return new JsonPrintJobStore(paths.AppDataRootPath, options.JobsFilePath);
+    return new SqlitePrintJobStore(paths.AppDataRootPath, options.JobsFilePath);
 });
 builder.Services.AddSingleton<MockPrintBackend>();
 builder.Services.AddSingleton<LpPrintBackend>();
@@ -514,6 +514,42 @@ protectedApi.MapGet("/print-jobs", async Task<IResult> (
 })
     .WithName("ListPrintJobs");
 
+protectedApi.MapGet("/print-jobs/queue", async (
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var queueStatus = await printJobService.GetQueueStatusAsync(cancellationToken);
+    return TypedResults.Ok(queueStatus);
+})
+    .WithName("GetPrintQueueStatus");
+
+protectedApi.MapPost("/print-jobs/queue/pause", async (
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var queueStatus = await printJobService.PauseQueueAsync(cancellationToken);
+    return TypedResults.Ok(queueStatus);
+})
+    .WithName("PausePrintQueue");
+
+protectedApi.MapPost("/print-jobs/queue/resume", async (
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var queueStatus = await printJobService.ResumeQueueAsync(cancellationToken);
+    return TypedResults.Ok(queueStatus);
+})
+    .WithName("ResumePrintQueue");
+
+protectedApi.MapPost("/print-jobs/queue/clear", async (
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var response = await printJobService.ClearQueueAsync(cancellationToken);
+    return TypedResults.Ok(response);
+})
+    .WithName("ClearPrintQueue");
+
 protectedApi.MapGet("/print-jobs/{jobId}", async Task<IResult> (
     string jobId,
     IPrintJobService printJobService,
@@ -525,6 +561,105 @@ protectedApi.MapGet("/print-jobs/{jobId}", async Task<IResult> (
         : TypedResults.Ok(job);
 })
     .WithName("GetPrintJob");
+
+protectedApi.MapDelete("/print-jobs/{jobId}", async Task<IResult> (
+    string jobId,
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var deletedJob = await printJobService.DeleteAsync(jobId, cancellationToken);
+
+        return deletedJob is null
+            ? TypedResults.NotFound(new ProblemDetails
+            {
+                Title = "Print job not found",
+                Detail = $"Print job '{jobId}' was not found.",
+                Status = StatusCodes.Status404NotFound
+            })
+            : TypedResults.NoContent();
+    }
+    catch (InvalidOperationException exception)
+    {
+        return TypedResults.Conflict(new ProblemDetails
+        {
+            Title = "Print job cannot be deleted",
+            Detail = exception.Message,
+            Status = StatusCodes.Status409Conflict
+        });
+    }
+})
+    .WithName("DeletePrintJob");
+
+protectedApi.MapPost("/print-jobs/cleanup", async (
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    var response = await printJobService.CleanupAsync(cancellationToken);
+    return TypedResults.Ok(response);
+})
+    .WithName("CleanupPrintJobs");
+
+protectedApi.MapPost("/print-jobs/{jobId}/cancel", async Task<IResult> (
+    string jobId,
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var canceledJob = await printJobService.CancelAsync(jobId, cancellationToken);
+
+        return canceledJob is null
+            ? TypedResults.NotFound(new ProblemDetails
+            {
+                Title = "Print job not found",
+                Detail = $"Print job '{jobId}' was not found.",
+                Status = StatusCodes.Status404NotFound
+            })
+            : TypedResults.Ok(canceledJob);
+    }
+    catch (InvalidOperationException exception)
+    {
+        return TypedResults.Conflict(new ProblemDetails
+        {
+            Title = "Print job cannot be canceled",
+            Detail = exception.Message,
+            Status = StatusCodes.Status409Conflict
+        });
+    }
+})
+    .WithName("CancelPrintJob");
+
+protectedApi.MapPost("/print-jobs/{jobId}/retry", async Task<IResult> (
+    string jobId,
+    IPrintJobService printJobService,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var retriedJob = await printJobService.RetryAsync(jobId, cancellationToken);
+
+        return retriedJob is null
+            ? TypedResults.NotFound(new ProblemDetails
+            {
+                Title = "Print job not found",
+                Detail = $"Print job '{jobId}' was not found.",
+                Status = StatusCodes.Status404NotFound
+            })
+            : TypedResults.Created($"/print-jobs/{retriedJob.JobId}", retriedJob);
+    }
+    catch (InvalidOperationException exception)
+    {
+        return TypedResults.Conflict(new ProblemDetails
+        {
+            Title = "Print job cannot be retried",
+            Detail = exception.Message,
+            Status = StatusCodes.Status409Conflict
+        });
+    }
+})
+    .WithName("RetryPrintJob");
 
 app.Run();
 

@@ -2,6 +2,11 @@
 
 PrintHub is a local HTTP service for printer discovery and PDF print jobs.
 
+Quick links:
+
+- [User guide](./docs/user-guide.md)
+- [API reference](./docs/api.md)
+
 ## Run in development
 
 ```bash
@@ -15,8 +20,8 @@ The local dashboard is served from:
 On first launch the dashboard opens with a built-in onboarding flow:
 
 - generate or enter the API key
-- inspect detected local printers
-- choose the default printer for jobs without `printerName`
+- optionally enable auto-start for the current user session
+- finish setup and then add printers from the local dashboard
 
 ## Runtime data location
 
@@ -29,7 +34,7 @@ By default PrintHub stores runtime data outside the build output:
 Stored data includes:
 
 - `data/settings.json`
-- `data/jobs.json`
+- `data/jobs.db`
 - `data/documents/`
 - `data/logs/`
 
@@ -89,6 +94,9 @@ The launcher:
 - waits for `/health`
 - opens the dashboard in the browser
 
+On macOS the publish output may also contain `PrintHub Tray.app`. This is a small
+menu bar helper that can start, stop and reopen PrintHub without keeping a terminal open.
+
 You can also override the startup URL manually:
 
 ```bash
@@ -117,6 +125,7 @@ On macOS the publish output also includes double-clickable `.command` wrappers:
 After install on macOS you get:
 
 - `~/Applications/PrintHub.app`
+- `~/Applications/PrintHub Tray.app` when the tray helper was built
 - `~/Applications/Stop PrintHub.command`
 - `~/Applications/Uninstall PrintHub.command`
 
@@ -127,6 +136,7 @@ The installer works in user space and does not require admin rights.
 ## Auto-start
 
 After install, auto-start can be enabled from the local dashboard in `Settings`.
+During first-run onboarding you can also enable it immediately with a single checkbox.
 
 PrintHub configures user-level startup only:
 
@@ -135,3 +145,12 @@ PrintHub configures user-level startup only:
 - Windows: Startup folder entry for the current user
 
 Auto-start uses the packaged launcher scripts, so it keeps the saved port and runtime home behavior.
+
+## Recommended first run
+
+1. Install or publish PrintHub and launch the local dashboard.
+2. Generate an API key in onboarding.
+3. Leave `Enable auto-start` on if this machine should always be ready to print.
+4. Open `Printers`, discover the OS printers and add the devices you actually want to expose.
+5. Set one printer as default and send a test print.
+6. Give the API key to the external system that will call `POST /print-jobs`.

@@ -51,10 +51,15 @@ install_macos() {
   local app_payload_dir="$resources_dir/app"
   local launchers_dir
   launchers_dir="$(cd "$(dirname "$install_dir")" && pwd)"
+  local tray_install_dir="$launchers_dir/PrintHub Tray.app"
 
   rm -rf "$install_dir"
   mkdir -p "$resources_dir" "$macos_dir"
   copy_directory "$SCRIPT_DIR" "$app_payload_dir"
+
+  if [[ -d "$SCRIPT_DIR/PrintHub Tray.app" ]]; then
+    copy_directory "$SCRIPT_DIR/PrintHub Tray.app" "$tray_install_dir"
+  fi
 
   cat > "$contents_dir/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -99,6 +104,9 @@ exec "$APP_DIR/uninstall-printhub.sh" "$SCRIPT_DIR/'"$bundle_name"'"'
 
   echo "PrintHub was installed for the current user."
   echo "  App bundle:   $install_dir"
+  if [[ -d "$tray_install_dir" ]]; then
+    echo "  Tray app:     $tray_install_dir"
+  fi
   echo "  Stop script:  $launchers_dir/Stop PrintHub.command"
   echo "  Uninstall:    $launchers_dir/Uninstall PrintHub.command"
   echo ""

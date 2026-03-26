@@ -584,6 +584,7 @@
     .job-badge.canceled   { background: rgba(255,255,255,0.04); color: var(--muted); }
 
     .job-error { font-size: 11px; color: var(--red); margin-top: 2px; line-height: 1.3; }
+    .job-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
     .empty-state {
       padding: 40px 20px;
@@ -826,16 +827,42 @@
       border: 1px solid var(--border2);
       background: var(--surface2);
       margin-bottom: 6px;
+      overflow: hidden;
     }
-    .printer-panel-row .printer-name { flex: 1; font-size: 13px; color: var(--text); }
-    .printer-panel-row .badge-default {
+    .printer-name-wrap {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .printer-panel-row .printer-name {
+      display: block;
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .printer-panel-row .printer-name.marquee-active {
+      text-overflow: clip;
+      animation: marquee-slide 6s ease-in-out 0.5s infinite alternate;
+    }
+    @keyframes marquee-slide {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(var(--marquee-end, 0px)); }
+    }
+    .status-pill {
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 600;
       padding: 2px 7px;
       border-radius: 10px;
-      background: var(--green-bg);
-      color: var(--green);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
+    .status-pill.ready   { background: var(--green-bg); color: var(--green); }
+    .status-pill.busy    { background: rgba(250,180,0,0.15); color: #f0b429; }
+    .status-pill.offline { background: rgba(255,255,255,0.08); color: var(--muted); }
+    .status-pill.error   { background: rgba(245,80,80,0.15); color: #f55; }
+    .status-pill.unknown { background: rgba(255,255,255,0.08); color: var(--muted2); }
     .printer-panel-row .btn-icon {
       background: none;
       border: none;
@@ -845,6 +872,7 @@
       border-radius: 4px;
       color: var(--muted);
       transition: background 0.1s, color 0.1s;
+      flex-shrink: 0;
     }
     .printer-panel-row .btn-icon:hover { background: rgba(255,255,255,0.07); color: var(--text); }
     .panel-empty { font-size: 13px; color: var(--muted); padding: 8px 0; }
@@ -943,6 +971,10 @@
           <input type="checkbox" id="auto-refresh-toggle" checked onchange="startAutoRefresh()">
           Авто 5с
         </label>
+        <span class="status-pill unsupported" id="queue-status-pill">Queue ?</span>
+        <button class="btn btn-sm btn-ghost" id="queue-toggle-btn" type="button" onclick="toggleQueuePause()">Пауза</button>
+        <button class="btn btn-sm btn-ghost" id="clear-queue-btn" type="button" onclick="clearPendingQueue()">Очистить очередь</button>
+        <button class="btn btn-sm btn-ghost" id="cleanup-jobs-btn" type="button" onclick="cleanupFinishedJobs()">Очистить историю</button>
         <button class="btn btn-sm btn-ghost" id="refresh-btn" type="button" onclick="loadJobs()">⟳ Обновить</button>
       </div>
 
@@ -1149,6 +1181,15 @@
         <p class="helper-text">Этот ключ используют сайт, ERP или CRM для доступа к PrintHub.</p>
       </div>
 
+      <div class="setup-note" id="onboarding-autostart-note">
+        PrintHub может запускаться автоматически после входа в систему. Это удобно для рабочих станций и офисных компьютеров.
+      </div>
+
+      <label class="toggle-row" style="margin-bottom:16px;">
+        <input type="checkbox" id="onboarding-enable-autostart" checked onchange="markOnboardingAutoStartTouched()">
+        Включить автозапуск после завершения настройки
+      </label>
+
       <div class="setup-actions" style="margin-bottom:16px;">
         <button class="btn btn-sm" type="button" onclick="generateOnboardingApiKey()">⚡ Сгенерировать</button>
         <button class="btn btn-sm" type="button" onclick="refreshSetupStatus()">⟳ Обновить</button>
@@ -1190,6 +1231,7 @@
   let currentSettings = null;
   let setupStatus     = null;
   let autoStartStatus = null;
+  let queueStatus     = null;
   let printersCache   = [];
   let jobsCache       = [];
   let activeTab       = 'upload';
@@ -1227,7 +1269,7 @@
     if (e.key === 'Escape' && _openPanel) { closePanel(); }
   });
 
-  function refreshAll() { loadJobs(); }
+  function refreshAll() { loadJobs(); loadQueueStatus(); }
 
   function loadSettingsIntoPanel() {
     // Settings form is permanently in the panel HTML — just re-apply current values
@@ -1265,15 +1307,17 @@
       if (registered.length === 0) {
         regList.innerHTML = '<div class="panel-empty">Принтеры не добавлены</div>';
       } else {
-        regList.innerHTML = registered.map(p => `
+        regList.innerHTML = registered.map(p => {
+          const st = normalizeStatus(p.status);
+          const stLabel = PRINTER_STATUS_LABELS[st] || st;
+          return `
           <div class="printer-panel-row">
-            <span class="status-dot ${normalizeStatus(p.status)}"></span>
-            <span class="printer-name">${esc(p.name)}</span>
-            ${p.isDefault ? '<span class="badge-default">По умолч.</span>' : ''}
-            <button class="btn-icon" title="По умолчанию" onclick="setPanelDefault('${escAttr(p.id)}')">★</button>
+            <span class="printer-name-wrap"><span class="printer-name">${esc(p.name)}</span></span>
+            <span class="status-pill ${st}">${stLabel}</span>
             <button class="btn-icon" title="Удалить" onclick="removePanelPrinter('${escAttr(p.id)}')">✕</button>
-          </div>
-        `).join('');
+          </div>`;
+        }).join('');
+        setupMarquee(regList);
       }
 
       if (discovered.length === 0) {
@@ -1282,10 +1326,11 @@
         discList.innerHTML = discovered.map(p => `
           <div class="printer-panel-row">
             <span class="status-dot ${normalizeStatus(p.status)}"></span>
-            <span class="printer-name">${esc(p.name)}</span>
+            <span class="printer-name-wrap"><span class="printer-name">${esc(p.name)}</span></span>
             <button class="btn btn-sm" onclick="addPanelPrinter('${escAttr(p.id)}')">+ Подключить</button>
           </div>
         `).join('');
+        setupMarquee(discList);
       }
     } catch (e) {
       regList.innerHTML = '<div class="panel-empty">Ошибка загрузки</div>';
@@ -1313,14 +1358,19 @@
     else showToast('Ошибка удаления', true);
   }
 
-  async function setPanelDefault(id) {
-    const key = resolveRequestApiKey();
-    const res = await fetch('/printers/' + encodeURIComponent(id) + '/default', {
-      method: 'PUT',
-      headers: authHeaders(key)
+  function setupMarquee(container) {
+    (container || document).querySelectorAll('.printer-name-wrap').forEach(wrap => {
+      const span = wrap.querySelector('.printer-name');
+      if (!span) return;
+      const offset = span.scrollWidth - wrap.clientWidth;
+      if (offset > 4) {
+        span.style.setProperty('--marquee-end', '-' + offset + 'px');
+        span.classList.add('marquee-active');
+      } else {
+        span.classList.remove('marquee-active');
+        span.style.removeProperty('--marquee-end');
+      }
     });
-    if (res.ok) { showToast('Принтер по умолчанию обновлён'); loadPanelPrinters(); }
-    else showToast('Ошибка', true);
   }
 
   // ── INIT ─────────────────────────────────────────────────
@@ -1331,6 +1381,7 @@
     await loadAutoStartStatus();
     await loadSetupStatus();
     await loadPrinters();
+    await loadQueueStatus();
     await loadJobs();
     startAutoRefresh();
   }
@@ -1374,6 +1425,24 @@
       updateSettingsSummary(currentSettings);
       showBanner(true);
       syncOnboardingApiKeyInput();
+    }
+  }
+
+  async function loadQueueStatus() {
+    try {
+      const response = await fetch('/print-jobs/queue', { headers: authHeaders(resolveRequestApiKey()) });
+
+      if (!response.ok) {
+        queueStatus = null;
+        updateQueueSummary(null);
+        return;
+      }
+
+      queueStatus = await response.json();
+      updateQueueSummary(queueStatus);
+    } catch {
+      queueStatus = null;
+      updateQueueSummary(null);
     }
   }
 
@@ -1427,13 +1496,16 @@
       if (!response.ok) {
         autoStartStatus = null;
         updateAutoStartSummary(null);
+        syncOnboardingAutoStartState(null);
         return;
       }
       autoStartStatus = await response.json();
       updateAutoStartSummary(autoStartStatus);
+      syncOnboardingAutoStartState(autoStartStatus);
     } catch {
       autoStartStatus = null;
       updateAutoStartSummary(null);
+      syncOnboardingAutoStartState(null);
     }
   }
 
@@ -1491,6 +1563,7 @@
       }
       autoStartStatus = await response.json();
       updateAutoStartSummary(autoStartStatus);
+      syncOnboardingAutoStartState(autoStartStatus);
       showToast(nextEnabled ? 'Автозапуск включён' : 'Автозапуск отключён');
     } catch (error) {
       showToast(`Ошибка: ${error.message}`, true);
@@ -1626,6 +1699,7 @@
     const button           = document.getElementById('setup-complete-btn');
     const apiKeyInput      = document.getElementById('onboarding-api-key-input');
     const onboardingApiKey = apiKeyInput.value.trim();
+    const shouldEnableAutoStart = Boolean(document.getElementById('onboarding-enable-autostart')?.checked);
 
     if (!onboardingApiKey) {
       showToast('Сначала задайте API ключ', true);
@@ -1652,10 +1726,13 @@
       await loadSettings();
       applySetupStatus(setupStatus);
       await loadAutoStartStatus();
+      const autoStartResult = shouldEnableAutoStart
+        ? await enableAutoStartFromOnboarding()
+        : 'skipped';
       await checkHealth();
       await loadPrinters();
       await loadJobs();
-      showToast('PrintHub готов к работе');
+      showToast(resolveOnboardingCompletionMessage(autoStartResult));
     } catch (error) {
       showToast(`Ошибка: ${error.message}`, true);
     } finally {
@@ -1717,6 +1794,7 @@
     document.getElementById('setup-summary-copy').textContent = resolveSetupSummary(next, printers);
 
     syncOnboardingApiKeyInput(next.hasApiKey ? (currentSettings?.apiKey || apiKey || '') : '');
+    syncOnboardingAutoStartState(autoStartStatus);
 
     shell.classList.toggle('visible', Boolean(next.isOnboardingRequired));
     document.body.classList.toggle('setup-open', Boolean(next.isOnboardingRequired));
@@ -1732,6 +1810,12 @@
 
   function resolveSetupSummary(status, printers) {
     if (!status.hasApiKey) return 'Сохраните API ключ — после этого PrintHub начнёт принимать защищённые запросы.';
+    if (autoStartStatus?.isSupported && !autoStartStatus.isEnabled) {
+      return 'API ключ сохранён. При желании включите автозапуск ниже, чтобы PrintHub был готов сразу после входа в систему.';
+    }
+    if (autoStartStatus?.isEnabled) {
+      return 'Всё готово. PrintHub будет запускаться автоматически после входа в систему.';
+    }
     if (printers.length === 0) return 'API ключ сохранён. Принтеры можно добавить через панель принтеров.';
     return 'Всё готово. Закройте мастер и переходите к тестовой печати.';
   }
@@ -1756,6 +1840,105 @@
     return `printhub-${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
   }
 
+  function markOnboardingAutoStartTouched() {
+    const checkbox = document.getElementById('onboarding-enable-autostart');
+    if (checkbox) {
+      checkbox.dataset.userTouched = 'true';
+    }
+  }
+
+  function syncOnboardingAutoStartState(status) {
+    const checkbox = document.getElementById('onboarding-enable-autostart');
+    const note = document.getElementById('onboarding-autostart-note');
+    if (!checkbox || !note) {
+      return;
+    }
+
+    if (!status) {
+      checkbox.disabled = true;
+      if (!checkbox.dataset.userTouched) {
+        checkbox.checked = false;
+      }
+      note.textContent = 'Статус автозапуска будет доступен после загрузки настроек PrintHub.';
+      return;
+    }
+
+    if (!status.isSupported) {
+      checkbox.disabled = true;
+      checkbox.checked = false;
+      note.textContent = 'Автозапуск недоступен в текущем режиме. Для фонового старта используйте установленную self-contained версию PrintHub.';
+      return;
+    }
+
+    checkbox.disabled = false;
+    if (!checkbox.dataset.userTouched) {
+      checkbox.checked = true;
+    }
+
+    if (status.isEnabled) {
+      checkbox.checked = true;
+      note.textContent = `Автозапуск уже включён через ${autoStartProviderLabel(status.provider)}. PrintHub будет стартовать автоматически после входа в систему.`;
+      return;
+    }
+
+    note.textContent = `Рекомендуется включить автозапуск через ${autoStartProviderLabel(status.provider)}, чтобы PrintHub был готов без ручного запуска.`;
+  }
+
+  async function enableAutoStartFromOnboarding() {
+    if (autoStartStatus?.isEnabled) {
+      return 'already-enabled';
+    }
+
+    if (autoStartStatus && !autoStartStatus.isSupported) {
+      return 'unsupported';
+    }
+
+    try {
+      const response = await fetch('/settings/auto-start', {
+        method: 'PUT',
+        headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: true })
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        return detail.detail ? `failed:${detail.detail}` : 'failed';
+      }
+
+      autoStartStatus = await response.json();
+      updateAutoStartSummary(autoStartStatus);
+      syncOnboardingAutoStartState(autoStartStatus);
+
+      return autoStartStatus?.isEnabled ? 'enabled' : 'failed';
+    } catch (error) {
+      return error?.message ? `failed:${error.message}` : 'failed';
+    }
+  }
+
+  function resolveOnboardingCompletionMessage(autoStartResult) {
+    if (autoStartResult === 'enabled') {
+      return 'PrintHub готов к работе. Автозапуск включён.';
+    }
+
+    if (autoStartResult === 'already-enabled') {
+      return 'PrintHub готов к работе. Автозапуск уже был включён.';
+    }
+
+    if (autoStartResult === 'unsupported') {
+      return 'PrintHub готов к работе. Автозапуск недоступен в текущем режиме.';
+    }
+
+    if (typeof autoStartResult === 'string' && autoStartResult.startsWith('failed:')) {
+      return `PrintHub готов к работе, но автозапуск включить не удалось: ${autoStartResult.slice('failed:'.length)}`;
+    }
+
+    if (autoStartResult === 'failed') {
+      return 'PrintHub готов к работе, но автозапуск включить не удалось.';
+    }
+
+    return 'PrintHub готов к работе';
+  }
+
   async function loadJobs() {
     const container = document.getElementById('jobs-container');
     const status    = document.getElementById('status-filter').value;
@@ -1766,11 +1949,14 @@
       const response = await fetch(url, { headers: authHeaders(resolveRequestApiKey()) });
       if (!response.ok) {
         jobsCache = [];
+        queueStatus = null;
+        updateQueueSummary(null);
         updateJobsSummary([]);
         container.innerHTML = '<div class="empty-state">Нет доступа к заданиям. Проверьте API ключ.</div>';
         return;
       }
       jobsCache = await response.json();
+      await loadQueueStatus();
       updateJobsSummary(jobsCache);
       if (!jobsCache.length) {
         container.innerHTML = '<div class="empty-state">Заданий пока нет.</div>';
@@ -1786,6 +1972,7 @@
               <th>Коп.</th>
               <th>Создано</th>
               <th>Завершено</th>
+              <th>Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -1803,6 +1990,13 @@
                 <td>${job.copies}</td>
                 <td class="job-ts">${fmtTime(job.createdAt)}</td>
                 <td class="job-ts">${job.completedAt ? fmtTime(job.completedAt) : '—'}</td>
+                <td>
+                  <div class="job-actions">
+                    ${canCancelJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="cancelJob('${escAttr(job.jobId)}')">Отменить</button>` : ''}
+                    ${canRetryJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="retryJob('${escAttr(job.jobId)}')">Повторить</button>` : ''}
+                    ${canDeleteJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="deleteJob('${escAttr(job.jobId)}')">Удалить</button>` : ''}
+                  </div>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -1810,6 +2004,8 @@
       `;
     } catch {
       jobsCache = [];
+      queueStatus = null;
+      updateQueueSummary(null);
       updateJobsSummary([]);
       container.innerHTML = '<div class="empty-state">Не удалось загрузить очередь заданий.</div>';
     }
@@ -1822,6 +2018,163 @@
       return;
     }
     refreshTimer = setInterval(loadJobs, 5000);
+  }
+
+  async function cancelJob(jobId) {
+    try {
+      const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}/cancel`, {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось отменить задание', true);
+        return;
+      }
+
+      showToast(`Задание ${jobId.slice(0, 8)}… отменено`);
+      await loadJobs();
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    }
+  }
+
+  async function retryJob(jobId) {
+    try {
+      const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}/retry`, {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok && response.status !== 201) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось повторить задание', true);
+        return;
+      }
+
+      const payload = await response.json();
+      showToast(`Создано новое задание: ${payload.jobId.slice(0, 8)}…`);
+      await loadJobs();
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    }
+  }
+
+  async function deleteJob(jobId) {
+    if (!confirm(`Удалить задание ${jobId.slice(0, 8)}… из истории?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}`, {
+        method: 'DELETE',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось удалить задание', true);
+        return;
+      }
+
+      showToast(`Задание ${jobId.slice(0, 8)}… удалено`);
+      await loadJobs();
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    }
+  }
+
+  async function cleanupFinishedJobs() {
+    const finishedCount = jobsCache.filter(canDeleteJob).length;
+
+    if (!finishedCount) {
+      showToast('В истории нет завершённых заданий для очистки');
+      return;
+    }
+
+    if (!confirm(`Удалить ${finishedCount} завершённых заданий из истории?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/print-jobs/cleanup', {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось очистить историю', true);
+        return;
+      }
+
+      const payload = await response.json();
+      showToast(`Удалено заданий: ${payload.deletedCount ?? 0}`);
+      await loadQueueStatus();
+      await loadJobs();
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    }
+  }
+
+  async function toggleQueuePause() {
+    const endpoint = queueStatus?.isPaused
+      ? '/print-jobs/queue/resume'
+      : '/print-jobs/queue/pause';
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось обновить состояние очереди', true);
+        return;
+      }
+
+      queueStatus = await response.json();
+      updateQueueSummary(queueStatus);
+      showToast(queueStatus.isPaused ? 'Очередь поставлена на паузу' : 'Очередь возобновлена');
+      await loadJobs();
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    }
+  }
+
+  async function clearPendingQueue() {
+    const pendingJobs = jobsCache.filter(job => normalizeStatus(job.status) === 'pending').length;
+
+    if (!pendingJobs) {
+      showToast('В очереди нет ожидающих заданий');
+      return;
+    }
+
+    if (!confirm(`Отменить ${pendingJobs} ожидающих заданий в очереди?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/print-jobs/queue/clear', {
+        method: 'POST',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || 'Не удалось очистить очередь', true);
+        return;
+      }
+
+      const payload = await response.json();
+      showToast(`Отменено заданий: ${payload.canceledCount ?? 0}`);
+      await loadQueueStatus();
+      await loadJobs();
+    } catch (error) {
+      showToast(`Ошибка: ${error.message}`, true);
+    }
   }
 
   async function createJob() {
@@ -2030,6 +2383,12 @@
       if (counts[key] !== undefined) counts[key]++;
     });
     const activeJobs = counts.pending + counts.processing;
+    const cleanupButton = document.getElementById('cleanup-jobs-btn');
+    const finishedJobs = counts.completed + counts.failed + counts.canceled;
+
+    if (cleanupButton) {
+      cleanupButton.disabled = finishedJobs === 0;
+    }
 
     document.getElementById('jobs-summary').innerHTML =
       `<span class="count-chip pending">ожид ${counts.pending}</span>` +
@@ -2041,6 +2400,47 @@
     document.getElementById('jobs-meta').textContent = jobs.length
       ? `Обновлено: ${new Date().toLocaleTimeString('ru-RU')} · Активных: ${activeJobs} · Всего: ${jobs.length}`
       : 'Очередь пуста.';
+  }
+
+  function updateQueueSummary(status) {
+    const pill = document.getElementById('queue-status-pill');
+    const toggle = document.getElementById('queue-toggle-btn');
+    const clear = document.getElementById('clear-queue-btn');
+
+    if (!pill || !toggle || !clear) {
+      return;
+    }
+
+    if (!status) {
+      pill.className = 'status-pill unsupported';
+      pill.textContent = 'Queue недоступна';
+      toggle.disabled = true;
+      toggle.textContent = 'Пауза';
+      clear.disabled = true;
+      return;
+    }
+
+    pill.className = `status-pill ${status.isPaused ? 'busy' : 'ready'}`;
+    pill.textContent = status.isPaused
+      ? `Пауза · ${status.queuedCount}`
+      : `Активна · ${status.queuedCount}`;
+    toggle.disabled = false;
+    toggle.textContent = status.isPaused ? 'Возобновить' : 'Пауза';
+    clear.disabled = status.queuedCount === 0;
+  }
+
+  function canCancelJob(job) {
+    return normalizeStatus(job.status) === 'pending';
+  }
+
+  function canRetryJob(job) {
+    const status = normalizeStatus(job.status);
+    return status === 'completed' || status === 'failed' || status === 'canceled';
+  }
+
+  function canDeleteJob(job) {
+    const status = normalizeStatus(job.status);
+    return status === 'completed' || status === 'failed' || status === 'canceled';
   }
 
   function renderPrinterSelect(printers, previousValue = '') {

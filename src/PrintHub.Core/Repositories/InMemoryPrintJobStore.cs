@@ -19,6 +19,17 @@ public sealed class InMemoryPrintJobStore : IPrintJobStore
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask<bool> DeleteAsync(string jobId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(jobId))
+        {
+            throw new ArgumentException("Job ID is required.", nameof(jobId));
+        }
+
+        var deleted = _jobs.TryRemove(jobId.Trim(), out _);
+        return ValueTask.FromResult(deleted);
+    }
+
     public ValueTask<PrintJob?> GetAsync(string jobId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobId))
