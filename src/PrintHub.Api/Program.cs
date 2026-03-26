@@ -168,9 +168,10 @@ settingsApi.MapGet("/setup-status", async (
     CancellationToken cancellationToken) =>
 {
     var settings = await settingsService.GetAsync(cancellationToken);
-    var printers = await backend.GetPrintersAsync(cancellationToken);
-
-    return TypedResults.Ok(ToSetupStatusDto(settings, printers));
+    IReadOnlyCollection<PrinterInfo> osPrinters;
+    try { osPrinters = await backend.GetPrintersAsync(cancellationToken); }
+    catch { osPrinters = []; }
+    return TypedResults.Ok(ToSetupStatusDto(settings, osPrinters));
 })
     .WithName("GetSetupStatus");
 
@@ -224,44 +225,30 @@ settingsApi.MapPost("/onboarding", async Task<IResult> (
     IPrintHubSettingsService settingsService,
     CancellationToken cancellationToken) =>
 {
+    if (string.IsNullOrWhiteSpace(request.ApiKey))
+    {
+        return TypedResults.UnprocessableEntity(new ProblemDetails
+        {
+            Title = "Validation error",
+            Detail = "API key is required.",
+            Status = StatusCodes.Status422UnprocessableEntity
+        });
+    }
+
     try
     {
-        var settings = await settingsService.GetAsync(cancellationToken);
-        IReadOnlyCollection<PrinterInfo>? printers = null;
-        var defaultPrinterName = settings.DefaultPrinterName;
-
-        if (!string.IsNullOrWhiteSpace(request.DefaultPrinterId))
+        var currentSettings = await settingsService.GetAsync(cancellationToken);
+        var updateRequest = ToUpdateRequest(currentSettings, currentSettings.DefaultPrinterName) with
         {
-            printers = await backend.GetPrintersAsync(cancellationToken);
-            var printer = FindPrinter(printers, request.DefaultPrinterId);
+            ApiKey = request.ApiKey
+        };
+        var updatedSettings = await settingsService.UpdateAsync(updateRequest, cancellationToken);
 
-            if (printer is null)
-            {
-                return TypedResults.BadRequest(new ProblemDetails
-                {
-                    Title = "Invalid onboarding request",
-                    Detail = $"Printer '{request.DefaultPrinterId}' was not found.",
-                    Status = StatusCodes.Status400BadRequest
-                });
-            }
+        IReadOnlyCollection<PrinterInfo> osPrinters;
+        try { osPrinters = await backend.GetPrintersAsync(cancellationToken); }
+        catch { osPrinters = []; }
 
-            defaultPrinterName = printer.Name;
-        }
-
-        var updatedSettings = await settingsService.UpdateAsync(
-            new UpdatePrintHubSettingsRequest(
-                settings.ServiceName,
-                settings.Port,
-                settings.ApiKeyHeaderName,
-                request.ApiKey,
-                defaultPrinterName,
-                settings.StorageDirectory,
-                settings.MaxUploadSizeBytes),
-            cancellationToken);
-
-        printers ??= await backend.GetPrintersAsync(cancellationToken);
-
-        return TypedResults.Ok(ToSetupStatusDto(updatedSettings, printers));
+        return TypedResults.Ok(ToSetupStatusDto(updatedSettings, osPrinters));
     }
     catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
     {
@@ -280,11 +267,106 @@ protectedApi.MapGet("/printers", async (
     IPrintHubSettingsService settingsService,
     CancellationToken cancellationToken) =>
 {
-    var printers = await backend.GetPrintersAsync(cancellationToken);
     var settings = await settingsService.GetAsync(cancellationToken);
-    return TypedResults.Ok(printers.Select(printer => ToDto(printer, settings.DefaultPrinterName)).ToArray());
+    if (settings.Printers.Count == 0)
+    {
+        return TypedResults.Ok(Array.Empty<PrinterDto>());
+    }
+
+    IReadOnlyCollection<PrinterInfo> osPrinters;
+    try { osPrinters = await backend.GetPrintersAsync(cancellationToken); }
+    catch { osPrinters = []; }
+
+    var dtos = settings.Printers.Select(registered =>
+    {
+        var osMatch = osPrinters.FirstOrDefault(os =>
+            string.Equals(os.Id, registered.Id, StringComparison.OrdinalIgnoreCase));
+        var status = osMatch?.Status ?? PrinterStatus.Offline;
+        return ToDto(new PrinterInfo(registered.Id, registered.Name, false, status),
+                     settings.DefaultPrinterName);
+    }).ToArray();
+
+    return TypedResults.Ok(dtos);
 })
     .WithName("GetPrinters");
+
+protectedApi.MapGet("/printers/discover", async (
+    IPrintBackend backend,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    var settings = await settingsService.GetAsync(cancellationToken);
+
+    IReadOnlyCollection<PrinterInfo> osPrinters;
+    try { osPrinters = await backend.GetPrintersAsync(cancellationToken); }
+    catch { osPrinters = []; }
+
+    var registeredIds = settings.Printers
+        .Select(p => p.Id)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    var unregistered = osPrinters
+        .Where(p => !registeredIds.Contains(p.Id))
+        .Select(p => ToDto(p, settings.DefaultPrinterName))
+        .ToArray();
+
+    return TypedResults.Ok(unregistered);
+})
+.WithName("DiscoverPrinters");
+
+protectedApi.MapPost("/printers", async Task<IResult> (
+    AddPrinterRequest request,
+    IPrintBackend backend,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    IReadOnlyCollection<PrinterInfo> osPrinters;
+    try { osPrinters = await backend.GetPrintersAsync(cancellationToken); }
+    catch { osPrinters = []; }
+
+    var osMatch = osPrinters.FirstOrDefault(p =>
+        string.Equals(p.Id, request.Id, StringComparison.OrdinalIgnoreCase));
+
+    if (osMatch is null)
+    {
+        return TypedResults.NotFound(new ProblemDetails
+        {
+            Title = "Printer not found",
+            Detail = $"Printer '{request.Id}' was not found in the OS printer list.",
+            Status = StatusCodes.Status404NotFound
+        });
+    }
+
+    var settings = await settingsService.AddPrinterAsync(osMatch.Id, osMatch.Name, cancellationToken);
+    var dto = ToDto(new PrinterInfo(osMatch.Id, osMatch.Name, false, osMatch.Status),
+                    settings.DefaultPrinterName);
+    return TypedResults.Ok(dto);
+})
+.WithName("AddPrinter");
+
+protectedApi.MapDelete("/printers/{printerId}", async Task<IResult> (
+    string printerId,
+    IPrintHubSettingsService settingsService,
+    CancellationToken cancellationToken) =>
+{
+    var settings = await settingsService.GetAsync(cancellationToken);
+    var exists = settings.Printers.Any(p =>
+        string.Equals(p.Id, printerId, StringComparison.OrdinalIgnoreCase));
+
+    if (!exists)
+    {
+        return TypedResults.NotFound(new ProblemDetails
+        {
+            Title = "Printer not found",
+            Detail = $"Printer '{printerId}' is not registered.",
+            Status = StatusCodes.Status404NotFound
+        });
+    }
+
+    await settingsService.RemovePrinterAsync(printerId, cancellationToken);
+    return TypedResults.NoContent();
+})
+.WithName("RemovePrinter");
 
 protectedApi.MapPut("/printers/{printerId}/default", async Task<IResult> (
     string printerId,
@@ -292,40 +374,60 @@ protectedApi.MapPut("/printers/{printerId}/default", async Task<IResult> (
     IPrintHubSettingsService settingsService,
     CancellationToken cancellationToken) =>
 {
-    var printers = await backend.GetPrintersAsync(cancellationToken);
-    var printer = FindPrinter(printers, printerId);
+    var settings = await settingsService.GetAsync(cancellationToken);
+    var registeredPrinter = settings.Printers.FirstOrDefault(p =>
+        string.Equals(p.Id, printerId, StringComparison.OrdinalIgnoreCase));
 
-    if (printer is null)
+    if (registeredPrinter is null)
     {
-        return TypedResults.NotFound();
+        return TypedResults.NotFound(new ProblemDetails
+        {
+            Title = "Printer not found",
+            Detail = $"Printer '{printerId}' is not registered.",
+            Status = StatusCodes.Status404NotFound
+        });
     }
 
-    var settings = await settingsService.GetAsync(cancellationToken);
     var updatedSettings = await settingsService.UpdateAsync(
-        ToUpdateRequest(settings, printer.Name),
-        cancellationToken);
+        ToUpdateRequest(settings, registeredPrinter.Name), cancellationToken);
 
-    return TypedResults.Ok(ToDto(printer, updatedSettings.DefaultPrinterName));
+    IReadOnlyCollection<PrinterInfo> osPrinters;
+    try { osPrinters = await backend.GetPrintersAsync(cancellationToken); }
+    catch { osPrinters = []; }
+
+    var osMatch = osPrinters.FirstOrDefault(p =>
+        string.Equals(p.Id, registeredPrinter.Id, StringComparison.OrdinalIgnoreCase));
+    var status = osMatch?.Status ?? PrinterStatus.Offline;
+    var dto = ToDto(
+        new PrinterInfo(registeredPrinter.Id, registeredPrinter.Name, false, status),
+        updatedSettings.DefaultPrinterName);
+
+    return TypedResults.Ok(dto);
 })
     .WithName("SetDefaultPrinter");
 
 protectedApi.MapPost("/printers/{printerId}/test-print", async Task<IResult> (
     string printerId,
-    IPrintBackend backend,
     IPrintJobService printJobService,
+    IPrintHubSettingsService settingsService,
     CancellationToken cancellationToken) =>
 {
-    var printers = await backend.GetPrintersAsync(cancellationToken);
-    var printer = FindPrinter(printers, printerId);
+    var settings = await settingsService.GetAsync(cancellationToken);
+    var registeredPrinter = settings.Printers.FirstOrDefault(p =>
+        string.Equals(p.Id, printerId, StringComparison.OrdinalIgnoreCase));
 
-    if (printer is null)
+    if (registeredPrinter is null)
     {
-        return TypedResults.NotFound();
+        return TypedResults.NotFound(new ProblemDetails
+        {
+            Title = "Printer not found",
+            Detail = $"Printer '{printerId}' is not registered.",
+            Status = StatusCodes.Status404NotFound
+        });
     }
 
     var createdJob = await printJobService.CreateAsync(
-        CreateTestPrintJobRequest(printer.Name),
-        cancellationToken);
+        CreateTestPrintJobRequest(registeredPrinter.Name), cancellationToken);
 
     return TypedResults.Created($"/print-jobs/{createdJob.JobId}", createdJob);
 })
@@ -447,20 +549,27 @@ static PrintHubSettingsDto ToSettingsDto(PrintHubSettings settings) =>
 
 static SetupStatusDto ToSetupStatusDto(
     PrintHubSettings settings,
-    IReadOnlyCollection<PrinterInfo> printers)
+    IReadOnlyCollection<PrinterInfo> osPrinters)
 {
-    var printerDtos = printers
-        .Select(printer => ToDto(printer, settings.DefaultPrinterName))
-        .ToArray();
     var hasApiKey = !string.IsNullOrWhiteSpace(settings.ApiKey);
-    var hasDefaultPrinter = HasResolvedDefaultPrinter(settings, printers);
-    var isOnboardingRequired = !hasApiKey || (printers.Count > 0 && !hasDefaultPrinter);
+    var isOnboardingRequired = !hasApiKey;
+
+    var registeredDtos = settings.Printers.Select(registered =>
+    {
+        var osMatch = osPrinters.FirstOrDefault(os =>
+            string.Equals(os.Id, registered.Id, StringComparison.OrdinalIgnoreCase));
+        var status = osMatch?.Status ?? PrinterStatus.Offline;
+        return ToDto(new PrinterInfo(registered.Id, registered.Name, false, status),
+                     settings.DefaultPrinterName);
+    }).ToArray();
+
+    var hasDefaultPrinter = HasResolvedDefaultPrinter(settings, registeredDtos);
 
     return new SetupStatusDto(
         isOnboardingRequired,
         hasApiKey,
         hasDefaultPrinter,
-        printerDtos);
+        registeredDtos);
 }
 
 static AutoStartStatusDto ToAutoStartDto(AutoStartRegistration registration) =>
@@ -481,27 +590,12 @@ static bool IsDefaultPrinter(PrinterInfo printer, string? defaultPrinterName)
         || string.Equals(printer.Id, defaultPrinterName, StringComparison.OrdinalIgnoreCase);
 }
 
-static bool HasResolvedDefaultPrinter(
-    PrintHubSettings settings,
-    IReadOnlyCollection<PrinterInfo> printers)
+static bool HasResolvedDefaultPrinter(PrintHubSettings settings, PrinterDto[] printers)
 {
-    if (printers.Count == 0)
-    {
+    if (printers.Length == 0)
         return !string.IsNullOrWhiteSpace(settings.DefaultPrinterName);
-    }
 
-    return printers.Any(printer => IsDefaultPrinter(printer, settings.DefaultPrinterName));
-}
-
-static PrinterInfo? FindPrinter(IEnumerable<PrinterInfo> printers, string printerId)
-{
-    if (string.IsNullOrWhiteSpace(printerId))
-    {
-        return null;
-    }
-
-    return printers.FirstOrDefault(printer =>
-        string.Equals(printer.Id, printerId, StringComparison.OrdinalIgnoreCase));
+    return printers.Any(p => p.IsDefault);
 }
 
 static UpdatePrintHubSettingsRequest ToUpdateRequest(PrintHubSettings settings, string? defaultPrinterName) =>

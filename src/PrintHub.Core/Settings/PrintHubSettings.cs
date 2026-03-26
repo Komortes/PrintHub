@@ -1,4 +1,5 @@
 using PrintHub.Contracts.Settings;
+using PrintHub.Core.Models;
 
 namespace PrintHub.Core.Settings;
 
@@ -36,7 +37,7 @@ public sealed record PrintHubSettings(
             NormalizeRequired(request.ServiceName, nameof(request.ServiceName)),
             ValidatePort(request.Port),
             NormalizeRequired(request.ApiKeyHeaderName, nameof(request.ApiKeyHeaderName)),
-            NormalizeRequired(request.ApiKey, nameof(request.ApiKey)),
+            NormalizeOptional(request.ApiKey),
             NormalizeOptional(request.DefaultPrinterName),
             NormalizeRequired(request.StorageDirectory, nameof(request.StorageDirectory)),
             ValidateMaxUploadSize(request.MaxUploadSizeBytes));
@@ -61,4 +62,6 @@ public sealed record PrintHubSettings(
                 nameof(maxUploadSizeBytes),
                 "Max upload size must be greater than 0.")
             : maxUploadSizeBytes;
+
+    public IReadOnlyList<RegisteredPrinter> Printers { get; init; } = [];
 }

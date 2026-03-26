@@ -5,556 +5,297 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PrintHub</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-top: #f2e7db;
-      --bg-bottom: #f8f6f1;
-      --surface: rgba(255, 252, 247, 0.84);
-      --surface-strong: rgba(255, 255, 255, 0.92);
-      --surface-dark: #1f2a33;
-      --border: rgba(35, 50, 61, 0.12);
-      --border-strong: rgba(35, 50, 61, 0.18);
-      --text: #1f2a33;
-      --muted: #65717b;
-      --muted-strong: #47535d;
-      --accent: #b85c38;
-      --accent-strong: #8f4022;
-      --accent-soft: rgba(184, 92, 56, 0.1);
-      --teal: #1f6f78;
-      --teal-soft: rgba(31, 111, 120, 0.1);
-      --green: #2e6c55;
-      --green-soft: rgba(46, 108, 85, 0.12);
-      --yellow: #af6f10;
-      --yellow-soft: rgba(175, 111, 16, 0.12);
-      --red: #b33f3f;
-      --red-soft: rgba(179, 63, 63, 0.12);
-      --shadow-lg: 0 28px 80px rgba(39, 37, 32, 0.12);
-      --shadow-md: 0 18px 44px rgba(39, 37, 32, 0.08);
-      --shadow-sm: 0 10px 28px rgba(39, 37, 32, 0.05);
-      --radius-xl: 28px;
-      --radius-lg: 22px;
-      --radius-md: 16px;
-      --radius-sm: 12px;
+      --bg:         #0b0f14;
+      --surface:    #111827;
+      --surface2:   #1a2436;
+      --border:     rgba(255,255,255,0.07);
+      --border2:    rgba(255,255,255,0.13);
+      --text:       #dde4ed;
+      --muted:      #7a8899;
+      --muted2:     #3e4f61;
+      --green:      #22c55e;
+      --green-bg:   rgba(34,197,94,0.09);
+      --amber:      #f59e0b;
+      --amber-bg:   rgba(245,158,11,0.09);
+      --red:        #ef4444;
+      --red-bg:     rgba(239,68,68,0.09);
+      --blue:       #3b82f6;
+      --blue-bg:    rgba(59,130,246,0.09);
+      --radius:     5px;
+      --radius-sm:  3px;
+      --font-mono:  'Consolas', 'Courier New', monospace;
+      --font-ui:    'Segoe UI', system-ui, -apple-system, sans-serif;
     }
 
     html, body {
-      margin: 0;
-      min-height: 100%;
-    }
-
-    body {
-      font-family: "Avenir Next", "Segoe UI Variable", "Helvetica Neue", sans-serif;
+      height: 100%;
+      background: var(--bg);
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(184, 92, 56, 0.22), transparent 30%),
-        radial-gradient(circle at top right, rgba(31, 111, 120, 0.18), transparent 34%),
-        linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 48%, #f1eee8 100%);
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.22;
-      background-image:
-        linear-gradient(rgba(35, 50, 61, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(35, 50, 61, 0.04) 1px, transparent 1px);
-      background-size: 28px 28px;
-      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent);
-    }
-
-    .page {
-      max-width: 1320px;
-      margin: 0 auto;
-      padding: 28px 20px 40px;
-    }
-
-    body.setup-open {
-      overflow: hidden;
-    }
-
-    .setup-shell {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(31, 42, 51, 0.42);
-      backdrop-filter: blur(10px);
-      z-index: 980;
-    }
-
-    .setup-shell.visible {
-      display: flex;
-    }
-
-    .setup-card {
-      width: min(1040px, 100%);
-      border-radius: 30px;
-      overflow: hidden;
-      border: 1px solid rgba(35, 50, 61, 0.1);
-      box-shadow: 0 36px 120px rgba(24, 28, 31, 0.28);
-      background: rgba(255, 252, 247, 0.94);
-      backdrop-filter: blur(24px);
-    }
-
-    .setup-body {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
-    }
-
-    .setup-intro {
-      padding: 34px;
-      background:
-        linear-gradient(180deg, rgba(31, 42, 51, 0.98), rgba(28, 38, 45, 0.94)),
-        radial-gradient(circle at top left, rgba(184, 92, 56, 0.28), transparent 46%);
-      color: #f8f5ef;
-    }
-
-    .setup-intro h2 {
-      margin: 18px 0 10px;
-      font-size: clamp(28px, 4vw, 40px);
-      line-height: 1.02;
-      letter-spacing: -0.04em;
-    }
-
-    .setup-intro p {
-      margin: 0;
-      color: rgba(248, 245, 239, 0.78);
-      font-size: 15px;
-      line-height: 1.7;
-    }
-
-    .setup-step-list {
-      display: grid;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    .setup-step {
-      padding: 16px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .setup-step.ready {
-      border-color: rgba(74, 160, 113, 0.22);
-      background: rgba(74, 160, 113, 0.12);
-    }
-
-    .setup-step.waiting {
-      border-color: rgba(242, 192, 90, 0.2);
-      background: rgba(242, 192, 90, 0.08);
-    }
-
-    .setup-step-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+      font-family: var(--font-ui);
       font-size: 14px;
-      font-weight: 700;
-    }
-
-    .setup-step-index {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-      font-size: 12px;
-      letter-spacing: 0.08em;
-    }
-
-    .setup-step-copy {
-      margin: 0;
-      color: rgba(248, 245, 239, 0.74);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .setup-chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 22px;
-    }
-
-    .setup-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: rgba(248, 245, 239, 0.82);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .setup-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      padding: 34px;
-      background: rgba(255, 252, 247, 0.94);
-    }
-
-    .setup-panel h3 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      letter-spacing: -0.03em;
-    }
-
-    .setup-panel p {
-      margin: 0;
-    }
-
-    .setup-inline-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .setup-note {
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(184, 92, 56, 0.08);
-      border: 1px solid rgba(184, 92, 56, 0.12);
-      color: var(--muted-strong);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .glass-card,
-    .card,
-    .stat-card {
-      background: var(--surface);
-      backdrop-filter: blur(22px);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.45fr) minmax(280px, 420px);
-      gap: 22px;
-      padding: 26px;
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .hero-copy {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      width: fit-content;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.76);
-      border: 1px solid rgba(35, 50, 61, 0.08);
-      color: var(--muted-strong);
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
-    .hero-title-row {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .hero h1 {
-      margin: 0;
-      font-size: clamp(34px, 5vw, 56px);
-      line-height: 0.96;
-      letter-spacing: -0.04em;
-      font-weight: 750;
-    }
-
-    .hero-subtitle {
-      margin: 0;
-      max-width: 720px;
-      color: var(--muted-strong);
-      font-size: 16px;
-      line-height: 1.65;
-    }
-
-    .hero-health {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(35, 50, 61, 0.08);
-      color: var(--muted-strong);
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .status-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      background: #c3c7cb;
-      box-shadow: 0 0 0 5px rgba(195, 199, 203, 0.18);
-    }
-
-    .status-dot.ok {
-      background: #4aa071;
-      box-shadow: 0 0 0 5px rgba(74, 160, 113, 0.16);
-    }
-
-    .status-dot.err {
-      background: #c85353;
-      box-shadow: 0 0 0 5px rgba(200, 83, 83, 0.16);
-    }
-
-    .hero-actions,
-    .hero-meta {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .meta-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(35, 50, 61, 0.08);
-      color: var(--muted-strong);
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .hero-panel {
-      border-radius: var(--radius-lg);
-      padding: 22px;
-      background:
-        linear-gradient(180deg, rgba(31, 42, 51, 0.96), rgba(27, 37, 45, 0.92)),
-        linear-gradient(120deg, rgba(184, 92, 56, 0.24), transparent 55%);
-      color: #f9f5ef;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    }
-
-    .panel-kicker {
-      margin: 0 0 8px;
-      color: rgba(249, 245, 239, 0.68);
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
-    .panel-title {
-      margin: 0 0 18px;
-      font-size: 28px;
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-    }
-
-    .panel-stats {
-      display: grid;
-      gap: 14px;
-    }
-
-    .panel-stat {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .panel-stat:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-
-    .panel-stat-label {
-      color: rgba(249, 245, 239, 0.68);
-      font-size: 13px;
-    }
-
-    .panel-stat-value {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      text-align: right;
-    }
-
-    #banner {
-      margin-top: 16px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 18px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 245, 232, 0.92);
-      border: 1px solid rgba(184, 92, 56, 0.16);
-      color: var(--accent-strong);
-      box-shadow: var(--shadow-sm);
-    }
-
-    #banner.visible {
-      display: flex;
-    }
-
-    #banner a {
-      color: var(--accent-strong);
-      font-weight: 700;
-      text-decoration: none;
-      border-bottom: 1px solid rgba(143, 64, 34, 0.28);
-      cursor: pointer;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 18px;
-    }
-
-    .stat-card {
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      min-height: 142px;
-    }
-
-    .stat-label {
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      font-weight: 700;
-    }
-
-    .stat-value {
-      font-size: clamp(22px, 3vw, 30px);
-      line-height: 1.05;
-      letter-spacing: -0.04em;
-      font-weight: 760;
-    }
-
-    .stat-caption {
-      color: var(--muted-strong);
-      font-size: 13px;
-      line-height: 1.45;
-      margin-top: auto;
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
-      gap: 20px;
-      margin-top: 20px;
-      align-items: start;
-    }
-
-    .stack {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .card {
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 18px 22px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .card-header h2,
-    .card-header h3,
-    .card-header p {
-      margin: 0;
-    }
-
-    .card-title {
-      font-size: 17px;
-      font-weight: 720;
-      letter-spacing: -0.02em;
-    }
-
-    .card-subtitle {
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .card-body {
-      padding: 22px;
-    }
-
-    .section-label {
-      margin: 0 0 10px;
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      font-weight: 700;
-    }
-
-    .section-note {
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 12px;
       line-height: 1.5;
     }
 
-    .field,
-    .field-group {
+    body.setup-open { overflow: hidden; }
+    body.panel-open { overflow: hidden; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 3px; }
+
+    /* ── HEADER ───────────────────────────────── */
+    #app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      align-items: center;
+      gap: 0;
+      height: 44px;
+      padding: 0 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border2);
+      flex-shrink: 0;
     }
 
-    .field-row {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border2);
+      margin-right: 14px;
+      flex-shrink: 0;
     }
 
-    label {
+    .brand-icon { color: var(--green); font-size: 17px; line-height: 1; }
+    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+
+    .header-health {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-right: 16px;
+      border-right: 1px solid var(--border);
+      margin-right: 14px;
       font-size: 12px;
       color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
+      flex-shrink: 0;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted2);
+      flex-shrink: 0;
+    }
+    .status-dot.ok  { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+    .status-dot.err { background: var(--red);   box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .hchip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+
+    /* ── BUTTONS ──────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:hover { background: rgba(255,255,255,0.09); border-color: var(--border2); }
+    .btn:active { background: rgba(255,255,255,0.13); }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
+
+    .btn-primary {
+      background: var(--green);
+      border-color: var(--green);
+      color: #021a08;
       font-weight: 700;
+    }
+    .btn-primary:hover { background: #16a34a; border-color: #16a34a; }
+
+    .btn-sm { padding: 4px 9px; font-size: 12px; }
+    .btn-icon { padding: 5px 8px; }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--muted);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.06); color: var(--text); border-color: var(--border); }
+
+    /* ── BANNER ───────────────────────────────── */
+    #banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      background: rgba(245,158,11,0.07);
+      border-bottom: 1px solid rgba(245,158,11,0.2);
+      font-size: 12px;
+      color: var(--amber);
+      flex-shrink: 0;
+    }
+    #banner.visible { display: flex; }
+    #banner a { color: var(--amber); text-decoration: underline; cursor: pointer; font-weight: 600; }
+
+    /* ── LAYOUT ───────────────────────────────── */
+    .app-wrap {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .app-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── SECTION / PANEL ──────────────────────── */
+    .panel { border-bottom: 1px solid var(--border); }
+    .panel:last-child { border-bottom: none; flex: 1; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .panel-header-title { flex: 1; }
+
+    .panel-body { padding: 14px; }
+
+    /* ── PRINTERS ─────────────────────────────── */
+    .printer-list { display: flex; flex-direction: column; }
+
+    .printer-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .printer-row:last-child { border-bottom: none; }
+    .printer-row:hover { background: rgba(255,255,255,0.025); }
+
+    .printer-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--muted2);
+    }
+    .printer-dot.ready {
+      background: var(--green);
+      animation: dotpulse 2.4s ease-in-out infinite;
+    }
+    .printer-dot.busy    { background: var(--amber); }
+    .printer-dot.error,
+    .printer-dot.offline { background: var(--red); }
+
+    @keyframes dotpulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+      50%      { box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+    }
+
+    .printer-info { flex: 1; min-width: 0; }
+
+    .printer-name-text {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .printer-id-text {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge-default {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.22);
+      flex-shrink: 0;
+    }
+
+    .printer-acts { display: flex; gap: 3px; flex-shrink: 0; }
+
+    /* ── FORMS ────────────────────────────────── */
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 5px;
     }
 
     input[type=text],
@@ -563,1018 +304,1026 @@
     select,
     textarea {
       width: 100%;
-      border: 1px solid var(--border-strong);
+      padding: 7px 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border2);
       border-radius: var(--radius-sm);
-      background: var(--surface-strong);
       color: var(--text);
-      padding: 12px 14px;
       font: inherit;
-      resize: vertical;
-      min-height: 48px;
+      font-size: 13px;
       outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      transition: border-color 0.12s, background 0.12s;
     }
 
-    textarea {
-      min-height: 132px;
-      line-height: 1.5;
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(59,130,246,0.5);
+      background: rgba(59,130,246,0.04);
     }
 
-    input:focus,
-    select:focus,
-    textarea:focus {
-      border-color: rgba(184, 92, 56, 0.46);
-      box-shadow: 0 0 0 4px rgba(184, 92, 56, 0.08);
-    }
+    input::placeholder, textarea::placeholder { color: var(--muted2); }
 
-    input::placeholder,
-    textarea::placeholder {
-      color: #9aa4ad;
-    }
+    textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
 
-    .btn-row,
-    .inline-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
+    select {
       appearance: none;
-      border: none;
-      border-radius: 999px;
-      padding: 12px 18px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-      color: #fff;
-      font: inherit;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
       cursor: pointer;
-      box-shadow: 0 12px 24px rgba(184, 92, 56, 0.22);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.2s ease, background 0.2s ease;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a8899'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 9px center;
+      padding-right: 26px;
     }
 
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 26px rgba(184, 92, 56, 0.24);
-    }
+    select option { background: #1a2436; }
 
-    .btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.55;
-      transform: none;
-      box-shadow: none;
-    }
+    .field { margin-bottom: 12px; }
+    .field:last-child { margin-bottom: 0; }
 
-    .btn-sm {
-      padding: 9px 14px;
-      font-size: 12px;
-      box-shadow: none;
-    }
-
-    .btn-secondary {
-      background: rgba(31, 111, 120, 0.12);
-      color: var(--teal);
-      box-shadow: none;
-    }
-
-    .btn-secondary:hover {
-      background: rgba(31, 111, 120, 0.18);
-    }
-
-    .btn-ghost {
-      background: rgba(35, 50, 61, 0.06);
-      color: var(--text);
-      box-shadow: none;
-    }
-
-    .btn-ghost:hover {
-      background: rgba(35, 50, 61, 0.1);
-    }
-
-    .settings-toggle {
-      color: var(--accent-strong);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-weight: 700;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    #settings-panel {
-      display: none;
-    }
-
-    #settings-panel.open {
-      display: block;
-    }
-
-    .settings-grid {
+    .field-row {
       display: grid;
-      gap: 18px;
-    }
-
-    .settings-note {
-      padding: 14px 16px;
-      border-radius: var(--radius-md);
-      background: rgba(31, 111, 120, 0.08);
-      color: var(--muted-strong);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .integration-panel {
-      padding: 16px 18px;
-      border-radius: var(--radius-md);
-      background: rgba(35, 50, 61, 0.04);
-      border: 1px solid rgba(35, 50, 61, 0.08);
-    }
-
-    .integration-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .integration-title {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .integration-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid rgba(35, 50, 61, 0.08);
-      color: var(--muted-strong);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .integration-status.enabled {
-      color: var(--green);
-      background: rgba(46, 108, 85, 0.08);
-      border-color: rgba(46, 108, 85, 0.18);
-    }
-
-    .integration-status.disabled {
-      color: var(--yellow);
-      background: rgba(175, 111, 16, 0.08);
-      border-color: rgba(175, 111, 16, 0.18);
-    }
-
-    .integration-status.unsupported {
-      color: var(--red);
-      background: rgba(179, 63, 63, 0.08);
-      border-color: rgba(179, 63, 63, 0.18);
-    }
-
-    .tabs {
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      width: 100%;
-      padding: 6px;
-      border-radius: 999px;
-      background: rgba(35, 50, 61, 0.06);
-    }
-
-    .tab {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 999px;
-      padding: 10px 14px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-    }
-
-    .tab.active {
-      background: rgba(255, 255, 255, 0.92);
-      color: var(--text);
-      box-shadow: inset 0 0 0 1px rgba(35, 50, 61, 0.08), 0 8px 18px rgba(39, 37, 32, 0.08);
-    }
-
-    .tab-panel {
-      display: none;
-      margin-top: 16px;
-    }
-
-    .tab-panel.active {
-      display: block;
-    }
-
-    .dropzone {
-      border: 1.5px dashed rgba(184, 92, 56, 0.36);
-      border-radius: var(--radius-lg);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 249, 243, 0.94)),
-        linear-gradient(120deg, rgba(184, 92, 56, 0.08), rgba(31, 111, 120, 0.06));
-      padding: 22px;
-      cursor: pointer;
-      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .dropzone:hover,
-    .dropzone.drag {
-      transform: translateY(-1px);
-      border-color: rgba(184, 92, 56, 0.54);
-      box-shadow: 0 14px 28px rgba(184, 92, 56, 0.12);
-    }
-
-    .dropzone input {
-      display: none;
-    }
-
-    .dropzone-title {
-      font-size: 16px;
-      font-weight: 720;
-      letter-spacing: -0.02em;
-    }
-
-    .dropzone-copy {
-      margin-top: 8px;
-      color: var(--muted-strong);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    #file-name {
-      margin-top: 12px;
-      min-height: 20px;
-      color: var(--green);
-      font-size: 13px;
-      font-weight: 700;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
     }
 
     .helper-text {
-      margin: 8px 0 0;
+      font-size: 11px;
       color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
+      margin-top: 5px;
+      line-height: 1.4;
     }
 
-    .printer-summary {
+    /* ── TABS ─────────────────────────────────── */
+    .tabs {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-      padding: 12px 14px;
-      border-radius: var(--radius-md);
-      background: rgba(31, 111, 120, 0.08);
-      color: var(--muted-strong);
-      font-size: 13px;
+      gap: 1px;
+      background: var(--border2);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 12px;
     }
 
-    .printer-list {
+    .tab {
+      flex: 1;
       display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .printer-item {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 12px;
-      padding: 16px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(35, 50, 61, 0.08);
-    }
-
-    .printer-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    .printer-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .printer-name {
-      font-size: 15px;
-      font-weight: 720;
-      letter-spacing: -0.02em;
-    }
-
-    .printer-secondary {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-      word-break: break-word;
-    }
-
-    .printer-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
       justify-content: center;
-      align-items: stretch;
-      min-width: 164px;
+      align-items: center;
+      padding: 6px;
+      background: rgba(255,255,255,0.02);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+    .tab.active  { background: var(--surface2); color: var(--text); }
+    .tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── DROPZONE ─────────────────────────────── */
+    .dropzone {
+      border: 1px dashed var(--border2);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: rgba(255,255,255,0.02);
+      margin-bottom: 6px;
+    }
+    .dropzone:hover, .dropzone.drag {
+      border-color: var(--blue);
+      background: var(--blue-bg);
+    }
+    .dropzone input { display: none; }
+
+    .dropzone-icon { font-size: 22px; margin-bottom: 4px; opacity: 0.5; }
+    .dropzone-text { font-size: 12px; color: var(--muted); }
+    .dropzone-file { font-size: 11px; font-family: var(--font-mono); color: var(--green); min-height: 16px; }
+
+    /* ── NOTE BOX ─────────────────────────────── */
+    .note-box {
+      padding: 9px 11px;
+      border-radius: var(--radius-sm);
+      background: var(--blue-bg);
+      border: 1px solid rgba(59,130,246,0.18);
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
     }
 
-    .printer-status {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-      background: #b9c1c7;
-      box-shadow: 0 0 0 5px rgba(185, 193, 199, 0.18);
+    /* ── AUTOSTART ────────────────────────────── */
+    .autostart-block {
+      padding: 11px 12px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border2);
+      margin-bottom: 12px;
     }
 
-    .printer-status.ready {
-      background: #4aa071;
-      box-shadow: 0 0 0 5px rgba(74, 160, 113, 0.14);
+    .autostart-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
     }
 
-    .printer-status.busy {
-      background: #d18a22;
-      box-shadow: 0 0 0 5px rgba(209, 138, 34, 0.16);
-    }
+    .autostart-title { font-size: 13px; font-weight: 600; }
 
-    .printer-status.offline,
-    .printer-status.error,
-    .printer-status.unknown {
-      background: #8d98a1;
-      box-shadow: 0 0 0 5px rgba(141, 152, 161, 0.16);
-    }
-
-    .pill,
-    .badge,
-    .summary-chip {
+    .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-size: 10px;
       font-weight: 800;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      border: 1px solid transparent;
+      flex-shrink: 0;
+    }
+    .status-pill.enabled    { background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.22); }
+    .status-pill.disabled   { background: var(--amber-bg); color: var(--amber); border-color: rgba(245,158,11,0.22); }
+    .status-pill.unsupported { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+    .autostart-info { font-size: 11px; color: var(--muted); margin-bottom: 9px; line-height: 1.45; }
+
+    /* ── JOBS ─────────────────────────────────── */
+    .jobs-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
     }
 
-    .pill.ready,
-    .badge.completed,
-    .summary-chip.completed {
-      color: var(--green);
-      background: var(--green-soft);
+    .jobs-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      flex-shrink: 0;
     }
 
-    .pill.busy,
-    .badge.processing,
-    .summary-chip.processing {
-      color: var(--teal);
-      background: var(--teal-soft);
-    }
+    .jobs-counts { display: flex; gap: 5px; }
 
-    .pill.offline,
-    .pill.error,
-    .pill.unknown,
-    .badge.canceled,
-    .summary-chip.canceled {
-      color: var(--muted-strong);
-      background: rgba(35, 50, 61, 0.08);
+    .count-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
     }
-
-    .badge.pending,
-    .summary-chip.pending {
-      color: var(--yellow);
-      background: var(--yellow-soft);
-    }
-
-    .badge.failed,
-    .summary-chip.failed {
-      color: var(--red);
-      background: var(--red-soft);
-    }
+    .count-chip.pending    { background: var(--amber-bg); color: var(--amber); border-color: rgba(245,158,11,0.2); }
+    .count-chip.processing { background: var(--blue-bg); color: var(--blue); border-color: rgba(59,130,246,0.2); }
+    .count-chip.completed  { background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.2); }
+    .count-chip.failed     { background: var(--red-bg); color: var(--red); border-color: rgba(239,68,68,0.2); }
+    .count-chip.canceled   { background: rgba(255,255,255,0.04); color: var(--muted); border-color: var(--border); }
 
     .jobs-toolbar {
       display: flex;
-      gap: 12px;
       align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+      flex-shrink: 0;
       flex-wrap: wrap;
-      padding: 18px 22px 0;
     }
 
     .jobs-toolbar label {
-      color: var(--muted-strong);
-      letter-spacing: normal;
-      text-transform: none;
-      font-size: 13px;
-      font-weight: 600;
+      display: inline;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 0;
     }
 
-    .jobs-toolbar select {
-      width: auto;
-      min-width: 170px;
-      min-height: 42px;
-      padding-top: 10px;
-      padding-bottom: 10px;
-    }
+    .jobs-toolbar select { width: auto; min-width: 140px; }
 
-    .jobs-toolbar-spacer {
-      margin-left: auto;
-    }
-
-    .jobs-status-bar {
+    .toggle-row {
       display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      padding: 14px 22px 16px;
-      border-bottom: 1px solid var(--border);
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
     }
+    .toggle-row input[type=checkbox] { width: auto; accent-color: var(--green); cursor: pointer; }
 
     .jobs-meta {
-      padding: 0 22px 12px;
-      color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
+      color: var(--muted2);
+      padding: 4px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      font-family: var(--font-mono);
     }
 
-    .jobs-table-shell {
-      overflow-x: auto;
-    }
+    .jobs-table-shell { flex: 1; overflow: auto; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 760px;
-    }
-
-    th,
-    td {
-      text-align: left;
-      padding: 14px 18px;
-      border-bottom: 1px solid rgba(35, 50, 61, 0.08);
-      vertical-align: top;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
 
     th {
-      color: var(--muted);
-      background: rgba(35, 50, 61, 0.03);
-      font-size: 12px;
-      letter-spacing: 0.12em;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--surface);
+      text-align: left;
+      padding: 7px 12px;
+      font-size: 10px;
       text-transform: uppercase;
-      font-weight: 700;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tr:hover td {
-      background: rgba(255, 255, 255, 0.52);
-    }
-
-    .job-id {
-      font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
-      font-size: 12px;
-      color: var(--muted-strong);
-      font-weight: 700;
-    }
-
-    .job-meta {
-      margin-top: 6px;
+      letter-spacing: 0.08em;
       color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border2);
+      white-space: nowrap;
     }
 
-    .error-text {
-      margin-top: 8px;
-      color: var(--red);
-      font-size: 12px;
-      line-height: 1.5;
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
     }
 
-    .empty-state {
-      padding: 34px 20px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.64);
-      border: 1px dashed rgba(35, 50, 61, 0.12);
-      color: var(--muted-strong);
-      font-size: 13px;
-      line-height: 1.6;
-      text-align: center;
-    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
 
-    .toolbar-toggle {
+    .job-id-short { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+    .job-id-full  { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+    .job-ts       { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+    .job-badge {
       display: inline-flex;
       align-items: center;
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+    .job-badge.pending    { background: var(--amber-bg); color: var(--amber); border-color: rgba(245,158,11,0.2); }
+    .job-badge.processing { background: var(--blue-bg); color: var(--blue); border-color: rgba(59,130,246,0.2); }
+    .job-badge.completed  { background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.2); }
+    .job-badge.failed     { background: var(--red-bg); color: var(--red); border-color: rgba(239,68,68,0.2); }
+    .job-badge.canceled   { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+    .job-error { font-size: 11px; color: var(--red); margin-top: 2px; line-height: 1.3; }
+
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── SETUP MODAL ──────────────────────────── */
+    .setup-shell {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      z-index: 900;
+    }
+    .setup-shell.visible { display: flex; }
+
+    .setup-card {
+      width: min(860px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+    }
+
+    .setup-left {
+      background: rgba(255,255,255,0.02);
+      border-right: 1px solid var(--border2);
+      padding: 24px 20px;
+    }
+
+    .setup-logo {
+      display: flex;
+      align-items: center;
       gap: 8px;
-      color: var(--muted-strong);
-      font-size: 12px;
-      font-weight: 600;
+      margin-bottom: 18px;
+    }
+    .setup-logo-icon { color: var(--green); font-size: 20px; }
+    .setup-logo-name { font-size: 16px; font-weight: 700; }
+
+    .setup-heading { font-size: 15px; font-weight: 700; margin-bottom: 5px; }
+    .setup-subtext { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
+
+    .setup-steps { display: flex; flex-direction: column; gap: 7px; }
+
+    .setup-step {
+      display: flex;
+      gap: 11px;
+      padding: 10px 11px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .setup-step.done {
+      border-color: rgba(34,197,94,0.25);
+      background: rgba(34,197,94,0.04);
     }
 
-    .toolbar-toggle input {
-      accent-color: var(--accent);
+    .setup-step-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 800;
+      flex-shrink: 0;
+      background: var(--muted2);
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .setup-step.done .setup-step-num { background: var(--green-bg); color: var(--green); }
+
+    .setup-step-title { font-size: 12px; font-weight: 700; }
+    .setup-step-copy  { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+    .setup-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 18px;
+    }
+    .setup-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
     }
 
+    .setup-right { padding: 24px 22px; }
+
+    .setup-form-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .setup-form-sub   { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
+
+    .setup-note {
+      padding: 9px 11px;
+      border-radius: var(--radius-sm);
+      background: rgba(59,130,246,0.06);
+      border: 1px solid rgba(59,130,246,0.15);
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 4px;
+      margin-bottom: 12px;
+    }
+
+    .setup-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
+    /* ── TOAST ────────────────────────────────── */
     #toast {
       position: fixed;
-      right: 24px;
-      bottom: 24px;
-      min-width: 240px;
-      max-width: min(420px, calc(100vw - 32px));
-      padding: 14px 16px;
-      border-radius: 18px;
-      background: rgba(31, 42, 51, 0.96);
-      color: #fff;
-      box-shadow: 0 20px 42px rgba(31, 42, 51, 0.24);
+      bottom: 80px;
+      right: 18px;
+      max-width: 320px;
+      padding: 9px 13px;
+      border-radius: var(--radius);
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text);
       font-size: 13px;
-      line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(6px);
       pointer-events: none;
-      transition: opacity 0.25s ease, transform 0.25s ease;
+      transition: opacity 0.18s, transform 0.18s;
       z-index: 1000;
     }
+    #toast.show  { opacity: 1; transform: none; }
+    #toast.error { background: rgba(239,68,68,0.14); border-color: rgba(239,68,68,0.3); color: var(--red); }
 
-    #toast.show {
-      opacity: 1;
-      transform: translateY(0);
+    /* ── FAB ─────────────────────────────────── */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 18px;
+      background: var(--green);
+      border: none;
+      border-radius: 24px;
+      color: #021a08;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(34,197,94,0.35);
+      transition: background 0.12s, box-shadow 0.12s;
+    }
+    .fab:hover { background: #16a34a; box-shadow: 0 4px 20px rgba(34,197,94,0.5); }
+    .fab:active { background: #15803d; }
+
+    /* ── SLIDE-IN PANEL ───────────────────────── */
+    .panel-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 940;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .panel-backdrop.open { display: block; opacity: 1; }
+
+    .slide-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 380px;
+      max-width: 100vw;
+      background: var(--surface);
+      border-left: 1px solid var(--border2);
+      z-index: 950;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+    .slide-panel.open { transform: translateX(0); }
+
+    .slide-panel-header {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      height: 44px;
+      border-bottom: 1px solid var(--border2);
+      background: rgba(255,255,255,0.02);
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .slide-panel-title { flex: 1; }
+    .slide-panel-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      line-height: 1;
+      transition: background 0.1s, color 0.1s;
+    }
+    .slide-panel-close:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+
+    .slide-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
     }
 
-    #toast.error {
-      background: rgba(179, 63, 63, 0.96);
+    /* ── PRINTER PANEL ROW ────────────────────── */
+    .printer-panel-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      margin-bottom: 6px;
+    }
+    .printer-panel-row .printer-name { flex: 1; font-size: 13px; color: var(--text); }
+    .printer-panel-row .badge-default {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: var(--green-bg);
+      color: var(--green);
+    }
+    .printer-panel-row .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--muted);
+      transition: background 0.1s, color 0.1s;
+    }
+    .printer-panel-row .btn-icon:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+    .panel-empty { font-size: 13px; color: var(--muted); padding: 8px 0; }
+
+    /* ── DISCOVER SECTION ─────────────────────── */
+    .discover-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted2);
+    }
+    .discover-divider::before,
+    .discover-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
 
-    @media (max-width: 1120px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .dashboard-grid,
-      .hero,
-      .setup-body {
-        grid-template-columns: 1fr;
-      }
-
-      .printer-actions {
-        min-width: 0;
-        flex-direction: row;
-        flex-wrap: wrap;
-      }
+    /* ── RESPONSIVE ───────────────────────────── */
+    @media (max-width: 860px) {
+      .setup-card { grid-template-columns: 1fr; }
+      .setup-left { border-right: none; border-bottom: 1px solid var(--border2); }
     }
 
-    @media (max-width: 780px) {
-      .page {
-        padding: 18px 14px 28px;
-      }
-
-      .hero,
-      .card-body,
-      .setup-intro,
-      .setup-panel {
-        padding: 18px;
-      }
-
-      .card-header,
-      .jobs-toolbar {
-        padding-left: 18px;
-        padding-right: 18px;
-      }
-
-      .jobs-status-bar,
-      .jobs-meta {
-        padding-left: 18px;
-        padding-right: 18px;
-      }
-
-      .stats-grid,
-      .field-row {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-title-row {
-        align-items: flex-start;
-      }
-
-      .jobs-toolbar-spacer {
-        margin-left: 0;
-      }
-
-      .jobs-toolbar {
-        align-items: stretch;
-      }
-
-      .jobs-toolbar select,
-      .btn {
-        width: 100%;
-      }
+    @media (max-width: 500px) {
+      .field-row { grid-template-columns: 1fr; }
+      .header-meta { display: none; }
     }
   </style>
 </head>
 <body>
-<div class="page">
-  <section class="hero glass-card">
-    <div class="hero-copy">
-      <span class="eyebrow">Local Print Gateway</span>
-      <div class="hero-title-row">
-        <h1>PrintHub</h1>
-        <div class="hero-health">
-          <span id="health-dot" class="status-dot"></span>
-          <span id="health-label">Проверка сервиса</span>
-        </div>
-      </div>
-      <p class="hero-subtitle">
-        Локальный HTTP сервис для управления принтерами и печатью PDF.
-        Подходит для сайта, ERP, CRM и внутренних интеграций, где веб-система должна печатать на локальном компьютере пользователя.
-      </p>
-      <div class="hero-actions">
-        <button class="btn btn-sm" type="button" onclick="openSettings()">Открыть настройки</button>
-        <button class="btn btn-sm btn-secondary" type="button" onclick="loadPrinters(); loadJobs();">Синхронизировать</button>
-      </div>
-      <div class="hero-meta">
-        <span class="meta-chip" id="service-chip">Сервис: PrintHub</span>
-        <span class="meta-chip" id="port-chip">Порт: 5051</span>
-        <span class="meta-chip" id="storage-chip">Хранилище: data/documents</span>
-      </div>
-    </div>
+<div class="app-wrap">
 
-    <div class="hero-panel">
-      <p class="panel-kicker">Состояние узла</p>
-      <h2 class="panel-title">Локальный узел печати</h2>
-      <div class="panel-stats">
-        <div class="panel-stat">
-          <span class="panel-stat-label">Принтеров в системе</span>
-          <strong class="panel-stat-value" id="panel-printer-count">—</strong>
-        </div>
-        <div class="panel-stat">
-          <span class="panel-stat-label">Активных заданий</span>
-          <strong class="panel-stat-value" id="panel-active-jobs">—</strong>
-        </div>
-        <div class="panel-stat">
-          <span class="panel-stat-label">Принтер по умолчанию</span>
-          <strong class="panel-stat-value" id="panel-default-printer">—</strong>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div id="banner">
-    API ключ ещё не настроен. Защищённые endpoint-ы будут отвечать `401`, пока вы не сохраните ключ.
-    <a onclick="openSettings()">Перейти к настройкам</a>
+<!-- ── HEADER ─────────────────────────────────────────────── -->
+<header id="app-header">
+  <div class="header-brand">
+    <span class="brand-icon">⎙</span>
+    <span class="brand-name">PrintHub</span>
   </div>
+  <div class="header-health">
+    <span class="status-dot" id="health-dot"></span>
+    <span id="health-label">Проверка</span>
+  </div>
+  <div class="header-meta">
+    <span class="hchip" id="service-chip">PrintHub</span>
+    <span class="hchip" id="port-chip">:5051</span>
+    <span class="hchip" id="storage-chip">data/documents</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-sm" type="button" onclick="refreshAll()">⟳ Обновить</button>
+    <button class="btn btn-sm btn-ghost" type="button" onclick="openPanel('settings')">⚙ Настройки</button>
+    <button class="btn btn-sm btn-ghost" id="printers-btn" type="button" onclick="openPanel('printers')">🖨 —</button>
+  </div>
+</header>
 
-  <section class="stats-grid">
-    <article class="stat-card">
-      <span class="stat-label">Сервис</span>
-      <strong class="stat-value" id="metric-service-name">PrintHub</strong>
-      <span class="stat-caption" id="metric-port">Порт 5051</span>
-    </article>
-    <article class="stat-card">
-      <span class="stat-label">Принтеры</span>
-      <strong class="stat-value" id="metric-printer-count">0</strong>
-      <span class="stat-caption" id="metric-default-printer">Принтер по умолчанию не выбран</span>
-    </article>
-    <article class="stat-card">
-      <span class="stat-label">Очередь</span>
-      <strong class="stat-value" id="metric-active-jobs">0</strong>
-      <span class="stat-caption" id="metric-job-count">Заданий в истории: 0</span>
-    </article>
-    <article class="stat-card">
-      <span class="stat-label">Файлы</span>
-      <strong class="stat-value" id="metric-file-limit">10 МБ</strong>
-      <span class="stat-caption" id="metric-storage">data/documents</span>
-    </article>
-  </section>
-
-  <section class="dashboard-grid">
-    <div class="stack">
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">Настройки узла</h2>
-            <p class="card-subtitle">Порт, API ключ и локальное хранилище сервиса.</p>
-          </div>
-          <span id="settings-toggle" class="settings-toggle" onclick="toggleSettings()">Открыть</span>
-        </div>
-        <div id="settings-panel" class="card-body">
-          <div class="settings-grid">
-            <div class="settings-note">
-              API ключ сохраняется локально в браузере, чтобы интерфейс мог автоматически отправлять защищённые запросы.
-              Изменение порта применяется после перезапуска сервиса.
-            </div>
-
-            <div class="field">
-              <label>API ключ</label>
-              <input type="text" id="api-key-input" placeholder="Введите API ключ">
-            </div>
-
-            <div class="field-row">
-              <div class="field">
-                <label>Имя сервиса</label>
-                <input type="text" id="service-name-input" placeholder="PrintHub">
-              </div>
-              <div class="field">
-                <label>Порт</label>
-                <input type="number" id="port-input" min="1" max="65535" placeholder="5051">
-              </div>
-            </div>
-
-            <div class="field-row">
-              <div class="field">
-                <label>Заголовок API ключа</label>
-                <input type="text" id="api-key-header-input" placeholder="X-PrintHub-Api-Key">
-              </div>
-              <div class="field">
-                <label>Макс. размер файла</label>
-                <input type="number" id="max-upload-size-input" min="1" placeholder="10485760">
-              </div>
-            </div>
-
-            <div class="field">
-              <label>Директория хранения</label>
-              <input type="text" id="storage-directory-input" placeholder="data/documents">
-            </div>
-
-            <div class="integration-panel">
-              <div class="integration-heading">
-                <div>
-                  <p class="integration-title">Автозапуск PrintHub</p>
-                  <p class="helper-text" id="autostart-provider-text">Проверка platform integration...</p>
-                </div>
-                <span id="autostart-status-pill" class="integration-status">Проверка</span>
-              </div>
-              <p class="helper-text" id="autostart-entry-text">Состояние автозапуска ещё не загружено.</p>
-              <div class="btn-row" style="margin-top: 14px;">
-                <button class="btn btn-secondary" id="autostart-toggle-btn" type="button" onclick="toggleAutoStart()">Загрузка...</button>
-              </div>
-            </div>
-
-            <div class="btn-row">
-              <button class="btn" type="button" onclick="saveSettings()">Сохранить настройки</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">Принтеры</h2>
-            <p class="card-subtitle">Доступные устройства и быстрые операции управления.</p>
-          </div>
-          <button class="btn btn-sm btn-secondary" type="button" onclick="loadPrinters()">Обновить</button>
-        </div>
-        <div class="card-body">
-          <div class="printer-summary">
-            <span id="printers-summary-text">Пока нет данных по принтерам.</span>
-            <span id="printers-summary-default">Ожидается синхронизация</span>
-          </div>
-          <div id="printers-list" class="printer-list">
-            <div class="empty-state">Загрузка списка принтеров...</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">Новое задание</h2>
-            <p class="card-subtitle">Отправьте PDF на печать через файл, URL или JSON Base64.</p>
-          </div>
-        </div>
-        <div class="card-body">
-          <p class="section-label">Источник документа</p>
-          <div class="tabs">
-            <div class="tab active" data-tab="upload" onclick="switchTab('upload')">Файл</div>
-            <div class="tab" data-tab="url" onclick="switchTab('url')">Ссылка</div>
-            <div class="tab" data-tab="base64" onclick="switchTab('base64')">Base64</div>
-          </div>
-
-          <div id="tab-upload" class="tab-panel active">
-            <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()"
-                 ondragover="event.preventDefault();this.classList.add('drag')"
-                 ondragleave="this.classList.remove('drag')"
-                 ondrop="handleDrop(event)">
-              <div class="dropzone-title">Перетащите PDF или выберите файл</div>
-              <div class="dropzone-copy">
-                Файл будет загружен локально в PrintHub и затем передан в очередь печати.
-              </div>
-              <input type="file" id="file-input" accept=".pdf" onchange="handleFileSelect(event)">
-            </div>
-            <div id="file-name"></div>
-            <p class="helper-text" id="upload-hint">Поддерживается PDF. Ограничение по размеру задаётся в настройках сервиса.</p>
-          </div>
-
-          <div id="tab-url" class="tab-panel">
-            <div class="field">
-              <label>Ссылка на PDF</label>
-              <input type="url" id="url-input" placeholder="https://example.com/document.pdf">
-            </div>
-            <p class="helper-text">PrintHub сам скачает PDF по указанному URL и подготовит его к печати.</p>
-          </div>
-
-          <div id="tab-base64" class="tab-panel">
-            <div class="field">
-              <label>Base64 содержимое</label>
-              <textarea id="base64-input" placeholder="JVBERi0xLjQK..."></textarea>
-            </div>
-            <div class="field">
-              <label>Имя файла</label>
-              <input type="text" id="base64-name-input" placeholder="document.pdf">
-            </div>
-          </div>
-
-          <div class="field-row" style="margin-top: 18px;">
-            <div class="field">
-              <label>Принтер</label>
-              <select id="printer-select">
-                <option value="">По умолчанию</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Копий</label>
-              <input type="number" id="copies-input" value="1" min="1" max="99">
-            </div>
-          </div>
-
-          <p class="helper-text" id="job-target-hint">Если принтер не выбран, PrintHub отправит задание на системный принтер по умолчанию.</p>
-
-          <div class="btn-row" style="margin-top: 18px;">
-            <button class="btn" id="print-btn" type="button" onclick="createJob()">Создать задание печати</button>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="stack">
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">Очередь и история заданий</h2>
-            <p class="card-subtitle">Живой список заданий с фильтрацией по статусу и автообновлением.</p>
-          </div>
-        </div>
-
-        <div class="jobs-toolbar">
-          <label for="status-filter">Фильтр статуса</label>
-          <select id="status-filter" onchange="loadJobs()">
-            <option value="">Все задания</option>
-            <option value="pending">Ожидание</option>
-            <option value="processing">В обработке</option>
-            <option value="completed">Выполнено</option>
-            <option value="failed">Ошибка</option>
-            <option value="canceled">Отменено</option>
-          </select>
-          <span class="jobs-toolbar-spacer"></span>
-          <label class="toolbar-toggle">
-            <input type="checkbox" id="auto-refresh-toggle" checked onchange="startAutoRefresh()">
-            Автообновление каждые 5 секунд
-          </label>
-          <button class="btn btn-sm btn-secondary" id="refresh-btn" type="button" onclick="loadJobs()">Обновить сейчас</button>
-        </div>
-
-        <div id="jobs-summary" class="jobs-status-bar">
-          <span class="summary-chip pending">pending 0</span>
-          <span class="summary-chip processing">processing 0</span>
-          <span class="summary-chip completed">completed 0</span>
-          <span class="summary-chip failed">failed 0</span>
-          <span class="summary-chip canceled">canceled 0</span>
-        </div>
-        <div id="jobs-meta" class="jobs-meta">Последнее обновление ещё не выполнялось.</div>
-
-        <div id="jobs-container" class="jobs-table-shell">
-          <div class="card-body">
-            <div class="empty-state">Загрузка списка заданий...</div>
-          </div>
-        </div>
-      </section>
-    </div>
-  </section>
+<!-- ── BANNER ─────────────────────────────────────────────── -->
+<div id="banner">
+  ⚠ API ключ не настроен. Защищённые endpoint-ы недоступны.
+  <a onclick="openSettings()">Настроить</a>
 </div>
 
+<!-- ── BODY ───────────────────────────────────────────────── -->
+<div class="app-body">
+
+  <div>
+    <div class="jobs-panel">
+
+      <div class="jobs-header">
+        <span style="flex:1;">Очередь и история печати</span>
+        <div id="jobs-summary" class="jobs-counts">
+          <span class="count-chip pending">ожид 0</span>
+          <span class="count-chip processing">печать 0</span>
+          <span class="count-chip completed">готово 0</span>
+          <span class="count-chip failed">ошибка 0</span>
+          <span class="count-chip canceled">отмен 0</span>
+        </div>
+      </div>
+
+      <div class="jobs-toolbar">
+        <label for="status-filter">Фильтр</label>
+        <select id="status-filter" onchange="loadJobs()">
+          <option value="">Все задания</option>
+          <option value="pending">Ожидание</option>
+          <option value="processing">Печать</option>
+          <option value="completed">Готово</option>
+          <option value="failed">Ошибка</option>
+          <option value="canceled">Отменено</option>
+        </select>
+        <label class="toggle-row" style="margin-left:6px;">
+          <input type="checkbox" id="auto-refresh-toggle" checked onchange="startAutoRefresh()">
+          Авто 5с
+        </label>
+        <button class="btn btn-sm btn-ghost" id="refresh-btn" type="button" onclick="loadJobs()">⟳ Обновить</button>
+      </div>
+
+      <div id="jobs-meta" class="jobs-meta">Ожидание первой загрузки.</div>
+
+      <div id="jobs-container" class="jobs-table-shell">
+        <div class="empty-state">Загрузка заданий...</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- .app-body -->
+</div><!-- .app-wrap -->
+
+<!-- ── FAB ───────────────────────────────────────────────── -->
+<button class="fab" type="button" onclick="openPanel('job')">⎙ Новое задание</button>
+
+<!-- ── PANEL BACKDROP ────────────────────────────────────── -->
+<div id="panel-backdrop" class="panel-backdrop" onclick="closePanel()"></div>
+
+<!-- ── PANEL: PRINTERS ───────────────────────────────────── -->
+<div id="panel-printers" class="slide-panel" role="dialog" aria-label="Принтеры">
+  <div class="slide-panel-header">
+    <span class="slide-panel-title">Принтеры</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть">✕</button>
+  </div>
+  <div class="slide-panel-body">
+    <div id="registered-printers-list"></div>
+    <div class="discover-divider">Доступны в системе</div>
+    <div id="discovered-printers-list"></div>
+  </div>
+</div>
+
+<!-- ── PANEL: NEW JOB ────────────────────────────────────── -->
+<div id="panel-job" class="slide-panel" role="dialog" aria-label="Новое задание">
+  <div class="slide-panel-header">
+    <span class="slide-panel-title">Новое задание</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть">✕</button>
+  </div>
+  <div class="slide-panel-body">
+    <div class="tabs">
+      <div class="tab active" data-tab="upload" onclick="switchTab('upload')">Файл</div>
+      <div class="tab" data-tab="url" onclick="switchTab('url')">Ссылка</div>
+      <div class="tab" data-tab="base64" onclick="switchTab('base64')">Base64</div>
+    </div>
+
+    <div id="tab-upload" class="tab-panel active">
+      <div class="dropzone" id="dropzone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-text">Перетащите PDF или нажмите для выбора</div>
+        <input type="file" id="file-input" accept=".pdf" onchange="handleFileSelect(event)">
+      </div>
+      <div id="file-name" class="dropzone-file"></div>
+      <p class="helper-text" id="upload-hint">Поддерживается PDF. Лимит задаётся в настройках.</p>
+    </div>
+
+    <div id="tab-url" class="tab-panel">
+      <div class="field">
+        <label>Ссылка на PDF</label>
+        <input type="url" id="url-input" placeholder="https://example.com/document.pdf">
+      </div>
+    </div>
+
+    <div id="tab-base64" class="tab-panel">
+      <div class="field">
+        <label>Base64 содержимое</label>
+        <textarea id="base64-input" placeholder="JVBERi0xLjQK..."></textarea>
+      </div>
+      <div class="field">
+        <label>Имя файла</label>
+        <input type="text" id="base64-name-input" placeholder="document.pdf">
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-top: 14px;">
+      <div class="field">
+        <label>Принтер</label>
+        <select id="printer-select">
+          <option value="">По умолчанию</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Копий</label>
+        <input type="number" id="copies-input" value="1" min="1" max="99">
+      </div>
+    </div>
+    <p class="helper-text" id="job-target-hint" style="margin-bottom:12px;">Если принтер не выбран, задание пойдёт на системный принтер по умолчанию.</p>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="print-btn" type="button" onclick="createJob()" style="width:100%;">⎙ Отправить на печать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL: SETTINGS ───────────────────────────────────── -->
+<div id="panel-settings" class="slide-panel" role="dialog" aria-label="Настройки">
+  <div class="slide-panel-header">
+    <span class="slide-panel-title">Настройки узла</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть">✕</button>
+  </div>
+  <div class="slide-panel-body" id="settings-panel-body">
+    <div class="note-box">
+      API ключ сохраняется локально в браузере для авторизации запросов. Изменение порта применяется после перезапуска сервиса.
+    </div>
+
+    <div class="field">
+      <label>API ключ</label>
+      <input
+        type="text"
+        id="api-key-input"
+        placeholder="printhub-..."
+        onchange="applyApiKey()"
+        onkeydown="handleApiKeyKeydown(event)">
+      <p class="helper-text">После вставки ключа нажмите Enter или просто перейдите к другому полю.</p>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Имя сервиса</label>
+        <input type="text" id="service-name-input" placeholder="PrintHub">
+      </div>
+      <div class="field">
+        <label>Порт</label>
+        <input type="number" id="port-input" min="1" max="65535" placeholder="5051">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Заголовок ключа</label>
+        <input type="text" id="api-key-header-input" placeholder="X-PrintHub-Api-Key">
+      </div>
+      <div class="field">
+        <label>Макс. файл (байт)</label>
+        <input type="number" id="max-upload-size-input" min="1" placeholder="10485760">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Директория хранения</label>
+      <input type="text" id="storage-directory-input" placeholder="data/documents">
+    </div>
+
+    <div class="autostart-block">
+      <div class="autostart-row">
+        <div>
+          <div class="autostart-title">Автозапуск PrintHub</div>
+          <div id="autostart-provider-text" style="font-size:11px;color:var(--muted);margin-top:2px;">Проверка...</div>
+        </div>
+        <span id="autostart-status-pill" class="status-pill">Проверка</span>
+      </div>
+      <div id="autostart-entry-text" class="autostart-info">Статус автозапуска ещё не загружен.</div>
+      <button class="btn btn-sm" id="autostart-toggle-btn" type="button" onclick="toggleAutoStart()">Загрузка...</button>
+    </div>
+
+    <button class="btn btn-primary" type="button" onclick="saveSettings()" style="width:100%;">
+      Сохранить настройки
+    </button>
+  </div>
+</div>
+
+<!-- ── SETUP MODAL ─────────────────────────────────────────── -->
 <div id="setup-shell" class="setup-shell">
   <div class="setup-card">
-    <div class="setup-body">
-      <section class="setup-intro">
-        <span class="eyebrow">First Run</span>
-        <h2>Подготовьте PrintHub к первой печати</h2>
-        <p>
-          Мастер первого запуска поможет задать API ключ, проверить локальные принтеры и
-          выбрать целевое устройство по умолчанию без ручной настройки через терминал.
-        </p>
+    <div class="setup-left">
+      <div class="setup-logo">
+        <span class="setup-logo-icon">⎙</span>
+        <span class="setup-logo-name">PrintHub</span>
+      </div>
+      <div class="setup-heading">Первый запуск</div>
+      <div class="setup-subtext">
+        Настройте API ключ, чтобы PrintHub был готов к приёму заданий.
+      </div>
 
-        <div class="setup-step-list">
-          <div id="setup-step-api" class="setup-step waiting">
-            <div class="setup-step-header">
-              <span class="setup-step-index">01</span>
-              <span id="setup-step-api-title">Добавить API ключ</span>
-            </div>
-            <p id="setup-step-api-copy" class="setup-step-copy">
-              Сохраните ключ, который будут использовать сайт, ERP или CRM для печати через локальный узел.
-            </p>
-          </div>
-
-          <div id="setup-step-printer" class="setup-step waiting">
-            <div class="setup-step-header">
-              <span class="setup-step-index">02</span>
-              <span id="setup-step-printer-title">Выбрать принтер</span>
-            </div>
-            <p id="setup-step-printer-copy" class="setup-step-copy">
-              Укажите устройство по умолчанию, чтобы новые задания уходили в правильную очередь печати.
-            </p>
+      <div class="setup-steps">
+        <div id="setup-step-api" class="setup-step">
+          <div class="setup-step-num">1</div>
+          <div>
+            <div class="setup-step-title" id="setup-step-api-title">Добавить API ключ</div>
+            <div class="setup-step-copy" id="setup-step-api-copy">Ключ для авторизации внешних систем.</div>
           </div>
         </div>
+      </div>
 
-        <div class="setup-chip-row">
-          <span id="setup-chip-service" class="setup-chip">Сервис: PrintHub</span>
-          <span id="setup-chip-port" class="setup-chip">Порт: 5051</span>
-          <span id="setup-chip-printers" class="setup-chip">Принтеры: 0</span>
-        </div>
-      </section>
+      <div class="setup-chips">
+        <span id="setup-chip-service" class="setup-chip">PrintHub</span>
+        <span id="setup-chip-port" class="setup-chip">:5051</span>
+        <span id="setup-chip-printers" class="setup-chip">0 принт.</span>
+      </div>
+    </div>
 
-      <section class="setup-panel">
-        <div>
-          <p class="section-label">Мастер первого запуска</p>
-          <h3>Быстрая настройка узла</h3>
-          <p class="card-subtitle" id="setup-summary-copy">
-            Настройте API ключ и принтер по умолчанию, чтобы PrintHub был готов к приёму заданий.
-          </p>
-        </div>
+    <div class="setup-right">
+      <div class="setup-form-title">Быстрая настройка</div>
+      <div class="setup-form-sub" id="setup-summary-copy">Настройте API ключ для старта.</div>
 
-        <div class="field">
-          <label>API ключ для интеграций</label>
-          <input type="text" id="onboarding-api-key-input" placeholder="printhub-...">
-          <p class="helper-text">Этот ключ понадобится внешним системам для доступа к защищённым endpoint-ам PrintHub.</p>
-        </div>
+      <div class="field">
+        <label>API ключ для интеграций</label>
+        <input type="text" id="onboarding-api-key-input" placeholder="printhub-...">
+        <p class="helper-text">Этот ключ используют сайт, ERP или CRM для доступа к PrintHub.</p>
+      </div>
 
-        <div class="setup-inline-actions">
-          <button class="btn btn-sm btn-secondary" type="button" onclick="generateOnboardingApiKey()">Сгенерировать ключ</button>
-          <button class="btn btn-sm btn-secondary" type="button" onclick="refreshSetupStatus()">Обновить принтеры</button>
-        </div>
+      <div class="setup-actions" style="margin-bottom:16px;">
+        <button class="btn btn-sm" type="button" onclick="generateOnboardingApiKey()">⚡ Сгенерировать</button>
+        <button class="btn btn-sm" type="button" onclick="refreshSetupStatus()">⟳ Обновить</button>
+      </div>
 
-        <div class="field">
-          <label>Принтер по умолчанию</label>
-          <select id="onboarding-printer-select">
-            <option value="">Авто / системный принтер</option>
-          </select>
-        </div>
-
-        <div id="onboarding-printer-note" class="setup-note">
-          PrintHub попробует определить системный принтер по умолчанию. При необходимости вы сможете изменить его позже на странице управления.
-        </div>
-
-        <div class="setup-inline-actions">
-          <button class="btn" id="setup-complete-btn" type="button" onclick="completeOnboarding()">Завершить настройку</button>
-          <button class="btn btn-sm btn-secondary" type="button" onclick="openAdvancedSettings()">Расширенные настройки</button>
-        </div>
-      </section>
+      <div class="setup-actions">
+        <button class="btn btn-primary" id="setup-complete-btn" type="button" onclick="completeOnboarding()">
+          Завершить настройку →
+        </button>
+        <button class="btn btn-sm" type="button" onclick="openAdvancedSettings()">Расширенные настройки</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- ── TOAST ───────────────────────────────────────────────── -->
 <div id="toast"></div>
 
 <script>
   const API_KEY_STORAGE_KEY = 'printhub.apiKey';
+
   const STATUS_LABELS = {
-    pending: 'Ожидание',
+    pending:    'Ожидание',
     processing: 'Печать',
-    completed: 'Готово',
-    failed: 'Ошибка',
-    canceled: 'Отменено'
+    completed:  'Готово',
+    failed:     'Ошибка',
+    canceled:   'Отменено'
   };
+
   const PRINTER_STATUS_LABELS = {
-    ready: 'Готов',
-    busy: 'Занят',
+    ready:   'Готов',
+    busy:    'Занят',
     offline: 'Отключён',
-    error: 'Ошибка',
+    error:   'Ошибка',
     unknown: 'Неизвестно'
   };
 
-  let apiKey = loadStoredApiKey();
+  let apiKey          = loadStoredApiKey();
   let currentSettings = null;
-  let setupStatus = null;
+  let setupStatus     = null;
   let autoStartStatus = null;
-  let printersCache = [];
-  let jobsCache = [];
-  let activeTab = 'upload';
-  let selectedFile = null;
-  let refreshTimer = null;
-  let toastTimer = null;
+  let printersCache   = [];
+  let jobsCache       = [];
+  let activeTab       = 'upload';
+  let selectedFile    = null;
+  let refreshTimer    = null;
+  let toastTimer      = null;
 
+  // ── PANEL OPEN/CLOSE ──────────────────────────────────────
+  let _openPanel = null;
+
+  function openPanel(name) {
+    if (_openPanel && _openPanel !== name) {
+      document.getElementById('panel-' + _openPanel).classList.remove('open');
+    }
+    _openPanel = name;
+    document.getElementById('panel-' + name).classList.add('open');
+    document.getElementById('panel-backdrop').classList.add('open');
+    document.body.classList.add('panel-open');
+    document.getElementById('panel-' + name).querySelector('.slide-panel-body').scrollTop = 0;
+    if (name === 'printers') loadPanelPrinters();
+    if (name === 'settings') loadSettingsIntoPanel();
+    if (name === 'job') loadPrinters();
+  }
+
+  function closePanel() {
+    if (_openPanel) {
+      document.getElementById('panel-' + _openPanel).classList.remove('open');
+      _openPanel = null;
+    }
+    document.getElementById('panel-backdrop').classList.remove('open');
+    document.body.classList.remove('panel-open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && _openPanel) { closePanel(); }
+  });
+
+  function refreshAll() { loadJobs(); }
+
+  function loadSettingsIntoPanel() {
+    // Settings form is permanently in the panel HTML — just re-apply current values
+    applySettingsToForm(currentSettings || fallbackSettings());
+    updateAutoStartSummary(autoStartStatus);
+  }
+
+  // ── PANEL: PRINTERS ───────────────────────────────────────
+  async function loadPanelPrinters() {
+    const regList = document.getElementById('registered-printers-list');
+    const discList = document.getElementById('discovered-printers-list');
+    regList.innerHTML = '<div class="panel-empty">Загрузка...</div>';
+    discList.innerHTML = '';
+
+    const key = resolveRequestApiKey();
+    const headers = authHeaders(key);
+
+    try {
+      const [regRes, discRes] = await Promise.all([
+        fetch('/printers', { headers }),
+        fetch('/printers/discover', { headers })
+      ]);
+
+      if (!regRes.ok) {
+        regList.innerHTML = `<div class="panel-empty">Ошибка ${regRes.status} — проверьте API ключ</div>`;
+        discList.innerHTML = '';
+        return;
+      }
+      const registered = await regRes.json();
+      const discovered = discRes.ok ? await discRes.json() : [];
+
+      const btn = document.getElementById('printers-btn');
+      if (btn) btn.textContent = '🖨 ' + (registered.length > 0 ? registered.length + ' принт.' : '—');
+
+      if (registered.length === 0) {
+        regList.innerHTML = '<div class="panel-empty">Принтеры не добавлены</div>';
+      } else {
+        regList.innerHTML = registered.map(p => `
+          <div class="printer-panel-row">
+            <span class="status-dot ${normalizeStatus(p.status)}"></span>
+            <span class="printer-name">${esc(p.name)}</span>
+            ${p.isDefault ? '<span class="badge-default">По умолч.</span>' : ''}
+            <button class="btn-icon" title="По умолчанию" onclick="setPanelDefault('${escAttr(p.id)}')">★</button>
+            <button class="btn-icon" title="Удалить" onclick="removePanelPrinter('${escAttr(p.id)}')">✕</button>
+          </div>
+        `).join('');
+      }
+
+      if (discovered.length === 0) {
+        discList.innerHTML = '<div class="panel-empty">Все принтеры уже добавлены</div>';
+      } else {
+        discList.innerHTML = discovered.map(p => `
+          <div class="printer-panel-row">
+            <span class="status-dot ${normalizeStatus(p.status)}"></span>
+            <span class="printer-name">${esc(p.name)}</span>
+            <button class="btn btn-sm" onclick="addPanelPrinter('${escAttr(p.id)}')">+ Подключить</button>
+          </div>
+        `).join('');
+      }
+    } catch (e) {
+      regList.innerHTML = '<div class="panel-empty">Ошибка загрузки</div>';
+    }
+  }
+
+  async function addPanelPrinter(id) {
+    const key = resolveRequestApiKey();
+    const res = await fetch('/printers', {
+      method: 'POST',
+      headers: { ...authHeaders(key), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    if (res.ok) { showToast('Принтер добавлен'); loadPanelPrinters(); }
+    else showToast('Ошибка добавления', true);
+  }
+
+  async function removePanelPrinter(id) {
+    const key = resolveRequestApiKey();
+    const res = await fetch('/printers/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: authHeaders(key)
+    });
+    if (res.ok) { showToast('Принтер удалён'); loadPanelPrinters(); }
+    else showToast('Ошибка удаления', true);
+  }
+
+  async function setPanelDefault(id) {
+    const key = resolveRequestApiKey();
+    const res = await fetch('/printers/' + encodeURIComponent(id) + '/default', {
+      method: 'PUT',
+      headers: authHeaders(key)
+    });
+    if (res.ok) { showToast('Принтер по умолчанию обновлён'); loadPanelPrinters(); }
+    else showToast('Ошибка', true);
+  }
+
+  // ── INIT ─────────────────────────────────────────────────
   async function init() {
     document.getElementById('api-key-input').value = apiKey;
     await checkHealth();
@@ -1587,39 +1336,34 @@
   }
 
   async function checkHealth() {
-    const dot = document.getElementById('health-dot');
+    const dot   = document.getElementById('health-dot');
     const label = document.getElementById('health-label');
-
     try {
-      const response = await fetch('/health');
-      const payload = await response.json();
-      dot.className = 'status-dot ok';
+      const response  = await fetch('/health');
+      const payload   = await response.json();
+      dot.className   = 'status-dot ok';
       label.textContent = payload.service || 'PrintHub';
     } catch {
-      dot.className = 'status-dot err';
-      label.textContent = 'Сервис недоступен';
+      dot.className   = 'status-dot err';
+      label.textContent = 'Недоступен';
     }
   }
 
   async function loadSettings() {
     try {
       const response = await fetch('/settings', { headers: authHeaders(resolveRequestApiKey()) });
-
       if (!response.ok) {
         currentSettings = currentSettings || fallbackSettings();
         applySettingsToForm(currentSettings);
         updateSettingsSummary(currentSettings);
-        showBanner(!apiKey);
+        showBanner(true);
         return;
       }
-
       currentSettings = await response.json();
-
       if (currentSettings.apiKey) {
         apiKey = currentSettings.apiKey;
         persistApiKey(apiKey);
       }
-
       applySettingsToForm(currentSettings);
       updateSettingsSummary(currentSettings);
       showBanner(!currentSettings.apiKey);
@@ -1628,6 +1372,7 @@
       currentSettings = currentSettings || fallbackSettings();
       applySettingsToForm(currentSettings);
       updateSettingsSummary(currentSettings);
+      showBanner(true);
       syncOnboardingApiKeyInput();
     }
   }
@@ -1635,37 +1380,55 @@
   async function loadSetupStatus() {
     try {
       const response = await fetch('/settings/setup-status', { headers: authHeaders(resolveRequestApiKey()) });
-
       if (!response.ok) {
         setupStatus = buildFallbackSetupStatus();
         applySetupStatus(setupStatus);
+        syncMainPrintersFromSetupStatus();
         return;
       }
-
       setupStatus = await response.json();
-
       if ((!apiKey || !setupStatus.hasApiKey) && Array.isArray(setupStatus.printers) && setupStatus.printers.length) {
         printersCache = setupStatus.printers;
         updatePrintersSummary(printersCache);
       }
-
       applySetupStatus(setupStatus);
+      syncMainPrintersFromSetupStatus();
     } catch {
       setupStatus = buildFallbackSetupStatus();
       applySetupStatus(setupStatus);
+      syncMainPrintersFromSetupStatus();
     }
+  }
+
+  async function applyApiKey() {
+    apiKey = document.getElementById('api-key-input')?.value.trim() || '';
+    persistApiKey(apiKey);
+    showBanner(!apiKey);
+
+    await loadSettings();
+    await loadAutoStartStatus();
+    await loadSetupStatus();
+    await loadPrinters();
+    await loadJobs();
+  }
+
+  function handleApiKeyKeydown(event) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+    applyApiKey();
   }
 
   async function loadAutoStartStatus() {
     try {
       const response = await fetch('/settings/auto-start', { headers: authHeaders(resolveRequestApiKey()) });
-
       if (!response.ok) {
         autoStartStatus = null;
         updateAutoStartSummary(null);
         return;
       }
-
       autoStartStatus = await response.json();
       updateAutoStartSummary(autoStartStatus);
     } catch {
@@ -1676,7 +1439,6 @@
 
   async function refreshSetupStatus() {
     await loadSetupStatus();
-
     if (setupStatus?.hasApiKey) {
       await loadPrinters();
     }
@@ -1684,23 +1446,17 @@
 
   async function saveSettings() {
     const payload = collectSettingsPayload();
-
     try {
       const response = await fetch('/settings', {
         method: 'PUT',
-        headers: {
-          ...authHeaders(resolveRequestApiKey()),
-          'Content-Type': 'application/json'
-        },
+        headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
         showToast(detail.detail || 'Не удалось сохранить настройки', true);
         return;
       }
-
       currentSettings = await response.json();
       apiKey = currentSettings.apiKey || '';
       persistApiKey(apiKey);
@@ -1721,25 +1477,18 @@
   async function toggleAutoStart() {
     const button = document.getElementById('autostart-toggle-btn');
     const nextEnabled = !(autoStartStatus?.isEnabled);
-
     button.disabled = true;
-
     try {
       const response = await fetch('/settings/auto-start', {
         method: 'PUT',
-        headers: {
-          ...authHeaders(resolveRequestApiKey()),
-          'Content-Type': 'application/json'
-        },
+        headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: nextEnabled })
       });
-
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
         showToast(detail.detail || 'Не удалось изменить автозапуск', true);
         return;
       }
-
       autoStartStatus = await response.json();
       updateAutoStartSummary(autoStartStatus);
       showToast(nextEnabled ? 'Автозапуск включён' : 'Автозапуск отключён');
@@ -1750,25 +1499,14 @@
     }
   }
 
-  function toggleSettings() {
-    const panel = document.getElementById('settings-panel');
-    const toggle = document.getElementById('settings-toggle');
-    const isOpen = panel.classList.toggle('open');
-    toggle.textContent = isOpen ? 'Свернуть' : 'Открыть';
-  }
-
   function openSettings() {
-    const panel = document.getElementById('settings-panel');
-    const toggle = document.getElementById('settings-toggle');
-    panel.classList.add('open');
-    toggle.textContent = 'Свернуть';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    openPanel('settings');
   }
 
   function openAdvancedSettings() {
     document.getElementById('setup-shell').classList.remove('visible');
     document.body.classList.remove('setup-open');
-    openSettings();
+    openPanel('settings');
   }
 
   function showBanner(show) {
@@ -1776,63 +1514,71 @@
   }
 
   async function loadPrinters() {
-    const list = document.getElementById('printers-list');
     const select = document.getElementById('printer-select');
-
     try {
       const response = await fetch('/printers', { headers: authHeaders(resolveRequestApiKey()) });
-
       if (!response.ok) {
-        printersCache = [];
-        renderPrinterSelect([]);
-        updatePrintersSummary([]);
-        list.innerHTML = '<div class="empty-state">Нет доступа к списку принтеров. Проверьте API ключ и настройки backend-а.</div>';
+        const fallback = Array.isArray(setupStatus?.printers) ? setupStatus.printers : [];
+        if (fallback.length > 0) {
+          printersCache = fallback;
+          renderPrinterSelect(printersCache, select.value);
+          updatePrintersSummary(printersCache);
+          syncSetupPrinters(printersCache);
+        } else {
+          printersCache = [];
+          renderPrinterSelect([]);
+          updatePrintersSummary([]);
+        }
         return;
       }
-
       const printers = await response.json();
       printersCache = Array.isArray(printers) ? printers : [];
       renderPrinterSelect(printersCache, select.value);
       updatePrintersSummary(printersCache);
+      syncSetupPrinters(printersCache);
 
-      if (!printersCache.length) {
-        list.innerHTML = '<div class="empty-state">Система не вернула ни одного принтера. Если вы тестируете локально, это нормально для mock/dev окружения.</div>';
-        return;
-      }
-
-      list.innerHTML = printersCache.map(printer => `
-        <div class="printer-item">
-          <div class="printer-meta">
-            <div class="printer-title">
-              <span class="printer-status ${normalizeStatus(printer.status)}"></span>
-              <span class="printer-name">${esc(printer.name)}</span>
-              <span class="pill ${normalizeStatus(printer.status)}">${printerStatusLabel(printer.status)}</span>
-              ${printer.isDefault ? '<span class="pill ready">По умолчанию</span>' : ''}
-            </div>
-            <div class="printer-secondary">
-              ID: ${esc(printer.id)}<br>
-              Статус backend-а: ${esc(printer.status || 'unknown')}
-            </div>
-          </div>
-          <div class="printer-actions">
-            <button
-              class="btn btn-sm ${printer.isDefault ? 'btn-ghost' : 'btn-secondary'}"
-              type="button"
-              ${printer.isDefault ? 'disabled' : ''}
-              onclick="setDefaultPrinter('${escAttr(printer.id)}')">${printer.isDefault ? 'Основной' : 'Сделать основным'}</button>
-            <button
-              class="btn btn-sm btn-ghost"
-              type="button"
-              onclick="testPrinter('${escAttr(printer.id)}')">Тестовая печать</button>
-          </div>
-        </div>
-      `).join('');
+      const btn = document.getElementById('printers-btn');
+      if (btn) btn.textContent = '🖨 ' + (printersCache.length > 0 ? printersCache.length + ' принт.' : '—');
     } catch {
-      printersCache = [];
-      renderPrinterSelect([], '');
-      updatePrintersSummary([]);
-      list.innerHTML = '<div class="empty-state">Не удалось загрузить принтеры из локального сервиса.</div>';
+      const fallback = Array.isArray(setupStatus?.printers) ? setupStatus.printers : [];
+      if (fallback.length > 0) {
+        printersCache = fallback;
+        renderPrinterSelect(printersCache, select.value);
+        updatePrintersSummary(printersCache);
+        syncSetupPrinters(printersCache);
+      } else {
+        printersCache = [];
+        renderPrinterSelect([], '');
+        updatePrintersSummary([]);
+      }
     }
+  }
+
+  function renderPrinterList(printers, listEl) {
+    if (!listEl) return;
+    listEl.innerHTML = printers.map(printer => `
+      <div class="printer-row">
+        <span class="printer-dot ${normalizeStatus(printer.status)}"></span>
+        <div class="printer-info">
+          <div class="printer-name-text">${esc(printer.name)}</div>
+          <div class="printer-id-text">${esc(printer.id)}</div>
+        </div>
+        ${printer.isDefault ? '<span class="badge-default">default</span>' : ''}
+        <div class="printer-acts">
+          <button class="btn btn-sm btn-ghost"
+            type="button"
+            ${printer.isDefault ? 'disabled' : ''}
+            onclick="setDefaultPrinter('${escAttr(printer.id)}')"
+            title="${printer.isDefault ? 'Уже основной' : 'Сделать основным'}"
+          >${printer.isDefault ? '★' : '☆'}</button>
+          <button class="btn btn-sm btn-ghost"
+            type="button"
+            onclick="testPrinter('${escAttr(printer.id)}')"
+            title="Тестовая печать"
+          >⎙</button>
+        </div>
+      </div>
+    `).join('');
   }
 
   async function setDefaultPrinter(printerId) {
@@ -1841,13 +1587,11 @@
         method: 'PUT',
         headers: authHeaders(resolveRequestApiKey())
       });
-
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
         showToast(detail.detail || 'Не удалось сохранить принтер по умолчанию', true);
         return;
       }
-
       const printer = await response.json();
       currentSettings = { ...(currentSettings || fallbackSettings()), defaultPrinterName: printer.name };
       updateSettingsSummary(currentSettings);
@@ -1865,15 +1609,13 @@
         method: 'POST',
         headers: authHeaders(resolveRequestApiKey())
       });
-
       if (!response.ok && response.status !== 201) {
         const detail = await response.json().catch(() => ({}));
         showToast(detail.detail || 'Не удалось отправить тестовую печать', true);
         return;
       }
-
       const payload = await response.json();
-      showToast(`Тестовое задание создано: ${payload.jobId.slice(0, 8)}…`);
+      showToast(`Тест отправлен: ${payload.jobId.slice(0, 8)}…`);
       await loadJobs();
     } catch (error) {
       showToast(`Ошибка: ${error.message}`, true);
@@ -1881,59 +1623,39 @@
   }
 
   async function completeOnboarding() {
-    const button = document.getElementById('setup-complete-btn');
-    const apiKeyInput = document.getElementById('onboarding-api-key-input');
-    const printerSelect = document.getElementById('onboarding-printer-select');
+    const button           = document.getElementById('setup-complete-btn');
+    const apiKeyInput      = document.getElementById('onboarding-api-key-input');
     const onboardingApiKey = apiKeyInput.value.trim();
-    const printers = Array.isArray(setupStatus?.printers) ? setupStatus.printers : [];
-    const defaultPrinterId = printerSelect.value || null;
-    const hasDetectedDefaultPrinter = printers.some(printer => printer.isDefault);
 
     if (!onboardingApiKey) {
-      showToast('Сначала задайте API ключ для PrintHub', true);
+      showToast('Сначала задайте API ключ', true);
       apiKeyInput.focus();
       return;
     }
 
-    if (printers.length > 0 && !defaultPrinterId && !hasDetectedDefaultPrinter) {
-      showToast('Выберите принтер по умолчанию или настройте системный default принтер', true);
-      printerSelect.focus();
-      return;
-    }
-
     button.disabled = true;
-
     try {
       const response = await fetch('/settings/onboarding', {
         method: 'POST',
-        headers: {
-          ...authHeaders(resolveRequestApiKey()),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          apiKey: onboardingApiKey,
-          defaultPrinterId
-        })
+        headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: onboardingApiKey })
       });
-
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось завершить первый запуск', true);
+        showToast(detail.detail || 'Не удалось завершить настройку', true);
         return;
       }
-
       setupStatus = await response.json();
       apiKey = onboardingApiKey;
       persistApiKey(apiKey);
       document.getElementById('api-key-input').value = apiKey;
-
       await loadSettings();
       applySetupStatus(setupStatus);
       await loadAutoStartStatus();
       await checkHealth();
       await loadPrinters();
       await loadJobs();
-      showToast('PrintHub готов к первой интеграции');
+      showToast('PrintHub готов к работе');
     } catch (error) {
       showToast(`Ошибка: ${error.message}`, true);
     } finally {
@@ -1944,69 +1666,56 @@
   function buildFallbackSetupStatus() {
     const printers = Array.isArray(printersCache) ? printersCache : [];
     const hasApiKey = Boolean(currentSettings?.apiKey || apiKey);
-    const hasDefaultPrinter = printers.some(printer => printer.isDefault) || Boolean(currentSettings?.defaultPrinterName);
-
+    const hasDefaultPrinter = printers.some(p => p.isDefault) || Boolean(currentSettings?.defaultPrinterName);
     return {
-      isOnboardingRequired: !hasApiKey || (printers.length > 0 && !hasDefaultPrinter),
+      isOnboardingRequired: !hasApiKey,
       hasApiKey,
       hasDefaultPrinter,
       printers
     };
   }
 
+  function syncMainPrintersFromSetupStatus() {
+    const printers = Array.isArray(setupStatus?.printers) ? setupStatus.printers : [];
+    const select = document.getElementById('printer-select');
+
+    printersCache = printers;
+    renderPrinterSelect(printers, select?.value || '');
+    updatePrintersSummary(printers);
+  }
+
+  function syncSetupPrinters(printers) {
+    const base = setupStatus || buildFallbackSetupStatus();
+    const hasDefaultPrinter = printers.some(p => p.isDefault) || Boolean(currentSettings?.defaultPrinterName);
+
+    applySetupStatus({
+      ...base,
+      printers,
+      hasDefaultPrinter,
+      isOnboardingRequired: !base.hasApiKey
+    });
+  }
+
   function applySetupStatus(status) {
-    const next = status || buildFallbackSetupStatus();
+    const next     = status || buildFallbackSetupStatus();
     const printers = Array.isArray(next.printers) ? next.printers : [];
     const settings = currentSettings || fallbackSettings();
-    const shell = document.getElementById('setup-shell');
-    setupStatus = next;
-    const printerReady = printers.length === 0 || next.hasDefaultPrinter;
-    const detectedDefaultPrinter = printers.find(printer => printer.isDefault)?.name
-      || currentSettings?.defaultPrinterName
-      || 'системный принтер';
+    const shell    = document.getElementById('setup-shell');
+    setupStatus    = next;
 
-    document.getElementById('setup-chip-service').textContent = `Сервис: ${settings.serviceName || 'PrintHub'}`;
-    document.getElementById('setup-chip-port').textContent = `Порт: ${settings.port || 5051}`;
-    document.getElementById('setup-chip-printers').textContent = `Принтеры: ${printers.length}`;
+    document.getElementById('setup-chip-service').textContent = settings.serviceName || 'PrintHub';
+    document.getElementById('setup-chip-port').textContent    = `:${settings.port || 5051}`;
+    document.getElementById('setup-chip-printers').textContent = `${printers.length} принт.`;
 
-    setSetupStep(
-      'setup-step-api',
-      next.hasApiKey,
-      'setup-step-api-title',
-      'setup-step-api-copy',
-      'API ключ готов',
-      'Защищённые endpoint-ы уже принимают запросы только с сохранённым ключом.',
+    setSetupStep('setup-step-api', next.hasApiKey,
+      'setup-step-api-title', 'setup-step-api-copy',
+      'API ключ настроен',
+      'Защищённые endpoint-ы принимают запросы с сохранённым ключом.',
       'Добавить API ключ',
-      'Сохраните ключ, который будут использовать сайт, ERP или CRM для печати через локальный узел.');
-
-    setSetupStep(
-      'setup-step-printer',
-      printerReady,
-      'setup-step-printer-title',
-      'setup-step-printer-copy',
-      printers.length
-        ? 'Принтер по умолчанию готов'
-        : 'Принтеры можно подключить позже',
-      printers.length
-        ? `PrintHub будет отправлять задания на: ${detectedDefaultPrinter}.`
-        : 'Сервис пока не нашёл локальных принтеров, поэтому этот шаг можно закончить позже.',
-      'Выбрать принтер',
-      'Укажите устройство по умолчанию, чтобы новые задания уходили в правильную очередь печати.');
+      'Ключ, который будут использовать сайт, ERP или CRM для печати.');
 
     document.getElementById('setup-summary-copy').textContent = resolveSetupSummary(next, printers);
 
-    if (printers.length === 0) {
-      document.getElementById('onboarding-printer-note').textContent =
-        'Локальные принтеры пока не обнаружены. Завершите setup с API ключом и подключите принтер позже, когда устройство появится в системе.';
-    } else if (next.hasDefaultPrinter) {
-      document.getElementById('onboarding-printer-note').textContent =
-        `Текущий принтер по умолчанию: ${detectedDefaultPrinter}. При необходимости вы можете выбрать другое устройство прямо сейчас.`;
-    } else {
-      document.getElementById('onboarding-printer-note').textContent =
-        'Выберите принтер по умолчанию, чтобы задания без `printerName` не уходили в неопределённую очередь.';
-    }
-
-    renderOnboardingPrinterSelect(printers);
     syncOnboardingApiKeyInput(next.hasApiKey ? (currentSettings?.apiKey || apiKey || '') : '');
 
     shell.classList.toggle('visible', Boolean(next.isOnboardingRequired));
@@ -2015,72 +1724,23 @@
 
   function setSetupStep(stepId, isReady, titleId, copyId, readyTitle, readyCopy, waitingTitle, waitingCopy) {
     const step = document.getElementById(stepId);
-    step.classList.toggle('ready', Boolean(isReady));
-    step.classList.toggle('waiting', !isReady);
+    if (!step) return;
+    step.classList.toggle('done', Boolean(isReady));
     document.getElementById(titleId).textContent = isReady ? readyTitle : waitingTitle;
-    document.getElementById(copyId).textContent = isReady ? readyCopy : waitingCopy;
+    document.getElementById(copyId).textContent  = isReady ? readyCopy  : waitingCopy;
   }
 
   function resolveSetupSummary(status, printers) {
-    if (!status.hasApiKey) {
-      return 'Сначала сохраните API ключ. После этого PrintHub начнёт принимать защищённые запросы от сайта или CRM.';
-    }
-
-    if (printers.length > 0 && !status.hasDefaultPrinter) {
-      return 'API ключ уже настроен. Осталось выбрать принтер по умолчанию и узел будет готов к первой печати.';
-    }
-
-    if (printers.length === 0) {
-      return 'API ключ уже сохранён. Принтеры пока не обнаружены, поэтому можно закончить setup и подключить устройство позже.';
-    }
-
-    return 'Все основные шаги завершены. Можно закрывать мастер и переходить к тестовой печати.';
-  }
-
-  function renderOnboardingPrinterSelect(printers) {
-    const select = document.getElementById('onboarding-printer-select');
-    const detectedDefaultPrinter = printers.find(printer => printer.isDefault)?.name;
-    const configuredDefaultPrinterId = resolveConfiguredDefaultPrinterId(printers);
-    const placeholder = detectedDefaultPrinter
-      ? `Авто / ${detectedDefaultPrinter}`
-      : 'Выберите принтер';
-
-    select.innerHTML = `<option value="">${esc(placeholder)}</option>` +
-      printers.map(printer => `<option value="${escAttr(printer.id)}">${esc(printer.name)}</option>`).join('');
-
-    select.value = configuredDefaultPrinterId;
-  }
-
-  function resolveConfiguredDefaultPrinterId(printers) {
-    const configuredDefaultPrinter = currentSettings?.defaultPrinterName;
-
-    if (!configuredDefaultPrinter) {
-      return '';
-    }
-
-    const printer = printers.find(candidate =>
-      String(candidate.id || '').toLowerCase() === String(configuredDefaultPrinter).toLowerCase() ||
-      String(candidate.name || '').toLowerCase() === String(configuredDefaultPrinter).toLowerCase());
-
-    return printer?.id || '';
+    if (!status.hasApiKey) return 'Сохраните API ключ — после этого PrintHub начнёт принимать защищённые запросы.';
+    if (printers.length === 0) return 'API ключ сохранён. Принтеры можно добавить через панель принтеров.';
+    return 'Всё готово. Закройте мастер и переходите к тестовой печати.';
   }
 
   function syncOnboardingApiKeyInput(preferredValue = '') {
     const input = document.getElementById('onboarding-api-key-input');
-
-    if (!input) {
-      return;
-    }
-
-    if (preferredValue) {
-      input.value = preferredValue;
-      return;
-    }
-
-    if (input.value.trim()) {
-      return;
-    }
-
+    if (!input) return;
+    if (preferredValue) { input.value = preferredValue; return; }
+    if (input.value.trim()) return;
     input.value = apiKey || currentSettings?.apiKey || generateSuggestedApiKey();
   }
 
@@ -2092,40 +1752,30 @@
   }
 
   function generateSuggestedApiKey() {
-    if (window.crypto?.randomUUID) {
-      return `printhub-${window.crypto.randomUUID()}`;
-    }
-
+    if (window.crypto?.randomUUID) return `printhub-${window.crypto.randomUUID()}`;
     return `printhub-${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
   }
 
   async function loadJobs() {
     const container = document.getElementById('jobs-container');
-    const status = document.getElementById('status-filter').value;
+    const status    = document.getElementById('status-filter').value;
     let url = '/print-jobs?limit=100';
-
-    if (status) {
-      url += `&status=${status}`;
-    }
+    if (status) url += `&status=${status}`;
 
     try {
       const response = await fetch(url, { headers: authHeaders(resolveRequestApiKey()) });
-
       if (!response.ok) {
         jobsCache = [];
         updateJobsSummary([]);
-        container.innerHTML = '<div class="card-body"><div class="empty-state">Нет доступа к заданиям. Проверьте API ключ.</div></div>';
+        container.innerHTML = '<div class="empty-state">Нет доступа к заданиям. Проверьте API ключ.</div>';
         return;
       }
-
       jobsCache = await response.json();
       updateJobsSummary(jobsCache);
-
       if (!jobsCache.length) {
-        container.innerHTML = '<div class="card-body"><div class="empty-state">Заданий пока нет. Создайте первое задание в блоке слева.</div></div>';
+        container.innerHTML = '<div class="empty-state">Заданий пока нет.</div>';
         return;
       }
-
       container.innerHTML = `
         <table>
           <thead>
@@ -2133,8 +1783,7 @@
               <th>Задание</th>
               <th>Принтер</th>
               <th>Статус</th>
-              <th>Формат</th>
-              <th>Копий</th>
+              <th>Коп.</th>
               <th>Создано</th>
               <th>Завершено</th>
             </tr>
@@ -2143,21 +1792,17 @@
             ${jobsCache.map(job => `
               <tr>
                 <td>
-                  <div class="job-id">${esc(job.jobId.slice(0, 8))}…</div>
-                  <div class="job-meta">${esc(job.jobId)}</div>
+                  <div class="job-id-short">${esc(job.jobId.slice(0, 8))}…</div>
+                  <div class="job-id-full">${esc(job.jobId)}</div>
                 </td>
+                <td>${esc(job.printerName || 'Системный')}</td>
                 <td>
-                  <div>${esc(job.printerName || 'Системный принтер')}</div>
-                  <div class="job-meta">${job.startedAt ? `Старт: ${fmtTime(job.startedAt)}` : 'Ожидает обработки'}</div>
+                  <span class="job-badge ${normalizeStatus(job.status)}">${statusLabel(job.status)}</span>
+                  ${job.errorMessage ? `<div class="job-error">${esc(job.errorMessage)}</div>` : ''}
                 </td>
-                <td>
-                  <span class="badge ${normalizeStatus(job.status)}">${statusLabel(job.status)}</span>
-                  ${job.errorMessage ? `<div class="error-text">${esc(job.errorMessage)}</div>` : ''}
-                </td>
-                <td>${esc((job.format || 'pdf').toUpperCase())}</td>
                 <td>${job.copies}</td>
-                <td>${fmtTime(job.createdAt)}</td>
-                <td>${job.completedAt ? fmtTime(job.completedAt) : '—'}</td>
+                <td class="job-ts">${fmtTime(job.createdAt)}</td>
+                <td class="job-ts">${job.completedAt ? fmtTime(job.completedAt) : '—'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -2166,54 +1811,36 @@
     } catch {
       jobsCache = [];
       updateJobsSummary([]);
-      container.innerHTML = '<div class="card-body"><div class="empty-state">Не удалось загрузить очередь заданий.</div></div>';
+      container.innerHTML = '<div class="empty-state">Не удалось загрузить очередь заданий.</div>';
     }
   }
 
   function startAutoRefresh() {
     clearInterval(refreshTimer);
-
     if (!document.getElementById('auto-refresh-toggle').checked) {
       document.getElementById('jobs-meta').textContent = 'Автообновление отключено.';
       return;
     }
-
     refreshTimer = setInterval(loadJobs, 5000);
   }
 
   async function createJob() {
-    const button = document.getElementById('print-btn');
+    const button  = document.getElementById('print-btn');
     const printer = document.getElementById('printer-select').value || null;
-    const copies = parseInt(document.getElementById('copies-input').value, 10) || 1;
+    const copies  = parseInt(document.getElementById('copies-input').value, 10) || 1;
 
-    if (activeTab === 'upload' && !selectedFile) {
-      showToast('Выберите PDF файл', true);
-      return;
-    }
-
-    if (activeTab === 'url' && !document.getElementById('url-input').value.trim()) {
-      showToast('Введите ссылку на PDF', true);
-      return;
-    }
-
-    if (activeTab === 'base64' && !document.getElementById('base64-input').value.trim()) {
-      showToast('Введите Base64 содержимое', true);
-      return;
-    }
+    if (activeTab === 'upload' && !selectedFile) { showToast('Выберите PDF файл', true); return; }
+    if (activeTab === 'url' && !document.getElementById('url-input').value.trim()) { showToast('Введите ссылку на PDF', true); return; }
+    if (activeTab === 'base64' && !document.getElementById('base64-input').value.trim()) { showToast('Введите Base64 содержимое', true); return; }
 
     button.disabled = true;
-
     try {
       let response;
-
       if (activeTab === 'upload') {
         const form = new FormData();
         form.append('file', selectedFile);
-        if (printer) {
-          form.append('printerName', printer);
-        }
+        if (printer) form.append('printerName', printer);
         form.append('copies', copies);
-
         response = await fetch('/print-jobs', {
           method: 'POST',
           headers: authHeaders(resolveRequestApiKey()),
@@ -2222,27 +1849,17 @@
       } else if (activeTab === 'url') {
         response = await fetch('/print-jobs', {
           method: 'POST',
-          headers: {
-            ...authHeaders(resolveRequestApiKey()),
-            'Content-Type': 'application/json'
-          },
+          headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             printerName: printer,
             copies,
-            document: {
-              type: 'url',
-              format: 'pdf',
-              url: document.getElementById('url-input').value.trim()
-            }
+            document: { type: 'url', format: 'pdf', url: document.getElementById('url-input').value.trim() }
           })
         });
       } else {
         response = await fetch('/print-jobs', {
           method: 'POST',
-          headers: {
-            ...authHeaders(resolveRequestApiKey()),
-            'Content-Type': 'application/json'
-          },
+          headers: { ...authHeaders(resolveRequestApiKey()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             printerName: printer,
             copies,
@@ -2255,7 +1872,6 @@
           })
         });
       }
-
       await handleJobResponse(response);
     } finally {
       button.disabled = false;
@@ -2268,9 +1884,9 @@
       showToast(detail.detail || `Ошибка ${response.status}`, true);
       return;
     }
-
-    showToast('Задание успешно создано');
+    showToast('Задание создано');
     resetJobForm();
+    closePanel();
     await loadJobs();
   }
 
@@ -2286,33 +1902,25 @@
 
   function handleFileSelect(event) {
     const file = event.target.files[0];
-    if (file) {
-      setFile(file);
-    }
+    if (file) setFile(file);
   }
 
   function handleDrop(event) {
     event.preventDefault();
     document.getElementById('dropzone').classList.remove('drag');
     const file = event.dataTransfer.files[0];
-    if (file) {
-      setFile(file);
-    }
+    if (file) setFile(file);
   }
 
   function setFile(file) {
     selectedFile = file;
-    document.getElementById('file-name').textContent = `Файл выбран: ${file.name}`;
+    document.getElementById('file-name').textContent = file.name;
   }
 
   function switchTab(name) {
     activeTab = name;
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.tab === name);
-    });
-    document.querySelectorAll('.tab-panel').forEach(panel => {
-      panel.classList.toggle('active', panel.id === `tab-${name}`);
-    });
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
   }
 
   function fallbackSettings() {
@@ -2329,21 +1937,27 @@
 
   function applySettingsToForm(settings) {
     const next = settings || fallbackSettings();
-    document.getElementById('api-key-input').value = apiKey || next.apiKey || '';
-    document.getElementById('service-name-input').value = next.serviceName || 'PrintHub';
-    document.getElementById('port-input').value = next.port || 5051;
-    document.getElementById('api-key-header-input').value = next.apiKeyHeaderName || 'X-PrintHub-Api-Key';
-    document.getElementById('storage-directory-input').value = next.storageDirectory || 'data/documents';
-    document.getElementById('max-upload-size-input').value = next.maxUploadSizeBytes || 10485760;
+    const apiKeyEl = document.getElementById('api-key-input');
+    if (apiKeyEl) apiKeyEl.value = apiKey || next.apiKey || '';
+    const serviceEl = document.getElementById('service-name-input');
+    if (serviceEl) serviceEl.value = next.serviceName || 'PrintHub';
+    const portEl = document.getElementById('port-input');
+    if (portEl) portEl.value = next.port || 5051;
+    const headerEl = document.getElementById('api-key-header-input');
+    if (headerEl) headerEl.value = next.apiKeyHeaderName || 'X-PrintHub-Api-Key';
+    const storageEl = document.getElementById('storage-directory-input');
+    if (storageEl) storageEl.value = next.storageDirectory || 'data/documents';
+    const sizeEl = document.getElementById('max-upload-size-input');
+    if (sizeEl) sizeEl.value = next.maxUploadSizeBytes || 10485760;
   }
 
   function collectSettingsPayload() {
     const fallback = currentSettings || fallbackSettings();
     return {
-      serviceName: document.getElementById('service-name-input').value.trim() || fallback.serviceName,
-      port: parseInt(document.getElementById('port-input').value, 10) || fallback.port,
-      apiKeyHeaderName: document.getElementById('api-key-header-input').value.trim() || fallback.apiKeyHeaderName,
-      apiKey: document.getElementById('api-key-input').value.trim() || null,
+      serviceName:      document.getElementById('service-name-input').value.trim()    || fallback.serviceName,
+      port:             parseInt(document.getElementById('port-input').value, 10)     || fallback.port,
+      apiKeyHeaderName: document.getElementById('api-key-header-input').value.trim()  || fallback.apiKeyHeaderName,
+      apiKey:           document.getElementById('api-key-input').value.trim()         || null,
       defaultPrinterName: fallback.defaultPrinterName || null,
       storageDirectory: document.getElementById('storage-directory-input').value.trim() || fallback.storageDirectory,
       maxUploadSizeBytes: parseInt(document.getElementById('max-upload-size-input').value, 10) || fallback.maxUploadSizeBytes
@@ -2352,141 +1966,114 @@
 
   function updateSettingsSummary(settings) {
     const next = settings || fallbackSettings();
-    document.getElementById('metric-service-name').textContent = next.serviceName || 'PrintHub';
-    document.getElementById('metric-port').textContent = `Порт ${next.port || 5051}`;
-    document.getElementById('metric-file-limit').textContent = formatBytes(next.maxUploadSizeBytes || 10485760);
-    document.getElementById('metric-storage').textContent = next.storageDirectory || 'data/documents';
-    document.getElementById('service-chip').textContent = `Сервис: ${next.serviceName || 'PrintHub'}`;
-    document.getElementById('port-chip').textContent = `Порт: ${next.port || 5051}`;
-    document.getElementById('storage-chip').textContent = `Хранилище: ${next.storageDirectory || 'data/documents'}`;
-    document.getElementById('upload-hint').textContent =
+    const serviceChip = document.getElementById('service-chip');
+    if (serviceChip) serviceChip.textContent = next.serviceName || 'PrintHub';
+    const portChip = document.getElementById('port-chip');
+    if (portChip) portChip.textContent = `:${next.port || 5051}`;
+    const storageChip = document.getElementById('storage-chip');
+    if (storageChip) storageChip.textContent = next.storageDirectory || 'data/documents';
+    const uploadHint = document.getElementById('upload-hint');
+    if (uploadHint) uploadHint.textContent =
       `Поддерживается PDF. Текущий лимит: ${formatBytes(next.maxUploadSizeBytes || 10485760)}.`;
   }
 
   function updateAutoStartSummary(status) {
-    const pill = document.getElementById('autostart-status-pill');
+    const pill    = document.getElementById('autostart-status-pill');
     const provider = document.getElementById('autostart-provider-text');
-    const entry = document.getElementById('autostart-entry-text');
-    const button = document.getElementById('autostart-toggle-btn');
+    const entry   = document.getElementById('autostart-entry-text');
+    const button  = document.getElementById('autostart-toggle-btn');
+
+    if (!pill) return;
 
     if (!status) {
-      pill.className = 'integration-status unsupported';
+      pill.className = 'status-pill unsupported';
       pill.textContent = 'Недоступно';
-      provider.textContent = 'Статус автозапуска пока недоступен из текущей сессии.';
-      entry.textContent = 'Проверьте API ключ или сохраните настройки, чтобы повторить запрос.';
-      button.disabled = true;
-      button.textContent = 'Недоступно';
+      if (provider) provider.textContent = 'Статус автозапуска недоступен.';
+      if (entry) entry.textContent = 'Проверьте API ключ или сохраните настройки.';
+      if (button) { button.disabled = true; button.textContent = 'Недоступно'; }
       return;
     }
-
     if (!status.isSupported) {
-      pill.className = 'integration-status unsupported';
-      pill.textContent = 'Недоступно';
-      provider.textContent = `Текущий режим запуска не поддерживает настройку через ${autoStartProviderLabel(status.provider)}.`;
-      entry.textContent = 'Для автозапуска используйте self-contained publish или установленный пользовательский пакет.';
-      button.disabled = true;
-      button.textContent = 'Недоступно';
+      pill.className = 'status-pill unsupported';
+      pill.textContent = 'Не поддерживается';
+      if (provider) provider.textContent = `Провайдер: ${autoStartProviderLabel(status.provider)}.`;
+      if (entry) entry.textContent = 'Используйте self-contained publish для поддержки автозапуска.';
+      if (button) { button.disabled = true; button.textContent = 'Недоступно'; }
       return;
     }
-
-    pill.className = `integration-status ${status.isEnabled ? 'enabled' : 'disabled'}`;
+    pill.className = `status-pill ${status.isEnabled ? 'enabled' : 'disabled'}`;
     pill.textContent = status.isEnabled ? 'Включён' : 'Выключен';
-    provider.textContent = `Провайдер автозапуска: ${autoStartProviderLabel(status.provider)}.`;
-    entry.textContent = status.entryPath
-      ? `Файл регистрации: ${status.entryPath}`
+    if (provider) provider.textContent = `Провайдер: ${autoStartProviderLabel(status.provider)}.`;
+    if (entry) entry.textContent = status.entryPath
+      ? `Файл: ${status.entryPath}`
       : 'Путь регистрации не определён.';
-    button.disabled = false;
-    button.textContent = status.isEnabled ? 'Отключить автозапуск' : 'Включить автозапуск';
+    if (button) {
+      button.disabled = false;
+      button.textContent = status.isEnabled ? 'Отключить автозапуск' : 'Включить автозапуск';
+    }
   }
 
   function updatePrintersSummary(printers) {
-    const count = printers.length;
-    const defaultPrinter = printers.find(printer => printer.isDefault)?.name
+    const defaultPrinter = printers.find(p => p.isDefault)?.name
       || currentSettings?.defaultPrinterName
       || 'Не выбран';
-    const availableText = count === 1 ? '1 принтер доступен' : `${count} принтеров доступно`;
 
-    document.getElementById('metric-printer-count').textContent = String(count);
-    document.getElementById('panel-printer-count').textContent = String(count);
-    document.getElementById('metric-default-printer').textContent = defaultPrinter;
-    document.getElementById('panel-default-printer').textContent = defaultPrinter;
-    document.getElementById('printers-summary-text').textContent = count ? availableText : 'Принтеры пока не найдены';
-    document.getElementById('printers-summary-default').textContent = `По умолчанию: ${defaultPrinter}`;
-    document.getElementById('job-target-hint').textContent =
+    const hintEl = document.getElementById('job-target-hint');
+    if (hintEl) hintEl.textContent =
       `Если принтер не выбран, PrintHub отправит задание на: ${defaultPrinter}.`;
   }
 
   function updateJobsSummary(jobs) {
-    const counts = {
-      pending: 0,
-      processing: 0,
-      completed: 0,
-      failed: 0,
-      canceled: 0
-    };
-
+    const counts = { pending: 0, processing: 0, completed: 0, failed: 0, canceled: 0 };
     jobs.forEach(job => {
       const key = normalizeStatus(job.status);
-      if (counts[key] !== undefined) {
-        counts[key] += 1;
-      }
+      if (counts[key] !== undefined) counts[key]++;
     });
-
     const activeJobs = counts.pending + counts.processing;
-    const summary = Object.entries(counts).map(([key, value]) =>
-      `<span class="summary-chip ${key}">${key} ${value}</span>`).join('');
 
-    document.getElementById('jobs-summary').innerHTML = summary;
-    document.getElementById('jobs-meta').textContent =
-      jobs.length
-        ? `Последнее обновление: ${new Date().toLocaleTimeString('ru-RU')}. Активных заданий: ${activeJobs}.`
-        : 'Последнее обновление: очередь пуста.';
+    document.getElementById('jobs-summary').innerHTML =
+      `<span class="count-chip pending">ожид ${counts.pending}</span>` +
+      `<span class="count-chip processing">печать ${counts.processing}</span>` +
+      `<span class="count-chip completed">готово ${counts.completed}</span>` +
+      `<span class="count-chip failed">ошибка ${counts.failed}</span>` +
+      `<span class="count-chip canceled">отмен ${counts.canceled}</span>`;
 
-    document.getElementById('metric-active-jobs').textContent = String(activeJobs);
-    document.getElementById('panel-active-jobs').textContent = String(activeJobs);
-    document.getElementById('metric-job-count').textContent = `Заданий в истории: ${jobs.length}`;
+    document.getElementById('jobs-meta').textContent = jobs.length
+      ? `Обновлено: ${new Date().toLocaleTimeString('ru-RU')} · Активных: ${activeJobs} · Всего: ${jobs.length}`
+      : 'Очередь пуста.';
   }
 
   function renderPrinterSelect(printers, previousValue = '') {
     const select = document.getElementById('printer-select');
+    if (!select) return;
     select.innerHTML = '<option value="">По умолчанию</option>' +
-      printers.map(printer => `<option value="${esc(printer.name)}">${esc(printer.name)}</option>`).join('');
-
-    if (previousValue && printers.some(printer => printer.name === previousValue)) {
+      printers.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+    if (previousValue && printers.some(p => p.name === previousValue)) {
       select.value = previousValue;
     }
   }
 
   function loadStoredApiKey() {
-    try {
-      return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
-    } catch {
-      return '';
-    }
+    try { return localStorage.getItem(API_KEY_STORAGE_KEY) || ''; } catch { return ''; }
   }
 
   function persistApiKey(value) {
     try {
-      if (value) {
-        localStorage.setItem(API_KEY_STORAGE_KEY, value);
-      } else {
-        localStorage.removeItem(API_KEY_STORAGE_KEY);
-      }
-    } catch {
-    }
+      if (value) localStorage.setItem(API_KEY_STORAGE_KEY, value);
+      else localStorage.removeItem(API_KEY_STORAGE_KEY);
+    } catch {}
   }
 
   function resolveRequestApiKey() {
-    return apiKey || document.getElementById('api-key-input').value.trim();
+    const inputValue = document.getElementById('api-key-input')?.value.trim() || '';
+    return inputValue || apiKey || '';
   }
 
   function authHeaders(apiKeyValue = apiKey) {
     return apiKeyValue ? { 'X-PrintHub-Api-Key': apiKeyValue } : {};
   }
 
-  function normalizeStatus(status) {
-    return String(status || 'unknown').toLowerCase();
-  }
+  function normalizeStatus(status) { return String(status || 'unknown').toLowerCase(); }
 
   function statusLabel(status) {
     return STATUS_LABELS[normalizeStatus(status)] || String(status || 'unknown');
@@ -2498,44 +2085,27 @@
 
   function autoStartProviderLabel(provider) {
     switch (String(provider || '').toLowerCase()) {
-      case 'launch-agent':
-        return 'macOS LaunchAgent';
-      case 'startup-folder':
-        return 'Windows Startup folder';
-      case 'desktop-autostart':
-        return 'Linux desktop autostart';
-      default:
-        return provider || 'неизвестный провайдер';
+      case 'launch-agent':      return 'macOS LaunchAgent';
+      case 'startup-folder':   return 'Windows Startup folder';
+      case 'desktop-autostart': return 'Linux desktop autostart';
+      default: return provider || 'неизвестный провайдер';
     }
   }
 
   function fmtTime(iso) {
-    if (!iso) {
-      return '—';
-    }
-
-    const value = new Date(iso);
-    return value.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }) + ' ' + value.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit'
-    });
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      + ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
   }
 
   function formatBytes(value) {
     const size = Number(value) || 0;
-    if (size <= 0) {
-      return '0 Б';
-    }
-
+    if (size <= 0) return '0 Б';
     const units = ['Б', 'КБ', 'МБ', 'ГБ'];
-    const exponent = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
-    const amount = size / Math.pow(1024, exponent);
-    const digits = amount >= 10 || exponent === 0 ? 0 : 1;
-    return `${amount.toFixed(digits)} ${units[exponent]}`;
+    const exp = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+    const amount = size / Math.pow(1024, exp);
+    return `${amount.toFixed(amount >= 10 || exp === 0 ? 0 : 1)} ${units[exp]}`;
   }
 
   function esc(value) {
@@ -2546,20 +2116,15 @@
   }
 
   function escAttr(value) {
-    return esc(value)
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return esc(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.className = isError ? 'error show' : 'show';
-
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      toast.className = '';
-    }, 3200);
+    toastTimer = setTimeout(() => { toast.className = ''; }, 3000);
   }
 
   init();

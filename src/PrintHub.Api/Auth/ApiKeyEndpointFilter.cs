@@ -7,41 +7,36 @@ namespace PrintHub.Api.Auth;
 public sealed class ApiKeyEndpointFilter : IEndpointFilter
 {
     private readonly IPrintHubSettingsService _settingsService;
-    private readonly ILogger<ApiKeyEndpointFilter> _logger;
 
-    public ApiKeyEndpointFilter(
-        IPrintHubSettingsService settingsService,
-        ILogger<ApiKeyEndpointFilter> logger)
+    public ApiKeyEndpointFilter(IPrintHubSettingsService settingsService)
     {
         _settingsService = settingsService;
-        _logger = logger;
     }
 
     public async ValueTask<object?> InvokeAsync(
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next)
     {
+        // Local requests (browser UI on the same machine) always pass through.
+        // API key is only required for external integrations.
+        if (IsLocalRequest(context.HttpContext))
+        {
+            return await next(context);
+        }
+
         var settings = await _settingsService.GetAsync(context.HttpContext.RequestAborted);
-        var request = context.HttpContext.Request;
 
         if (string.IsNullOrWhiteSpace(settings.ApiKey))
         {
-            if (request.Path.StartsWithSegments("/settings") && IsLocalRequest(context.HttpContext))
-            {
-                return await next(context);
-            }
-
-            _logger.LogError("API key is not configured. Protected endpoints are unavailable.");
-
             return TypedResults.Problem(new ProblemDetails
             {
                 Title = "API key is not configured",
-                Detail = "Configure an API key via /settings from localhost before calling protected endpoints.",
+                Detail = "Configure an API key before allowing external access.",
                 Status = StatusCodes.Status503ServiceUnavailable
             });
         }
 
-        var providedApiKey = request.Headers[settings.ApiKeyHeaderName].ToString();
+        var providedApiKey = context.HttpContext.Request.Headers[settings.ApiKeyHeaderName].ToString();
 
         if (string.IsNullOrWhiteSpace(providedApiKey) ||
             !string.Equals(providedApiKey, settings.ApiKey, StringComparison.Ordinal))

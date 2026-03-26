@@ -8,14 +8,16 @@ namespace PrintHub.Api.Tests;
 public sealed class SettingsAndAuthTests
 {
     [Fact]
-    public async Task ProtectedEndpoints_ReturnUnauthorizedWithoutApiKey()
+    public async Task ProtectedEndpoints_ReturnOk_ForLocalRequests()
     {
+        // Local requests (null RemoteIpAddress in test context) always pass through —
+        // no API key header needed for the local UI.
         using var factory = new PrintHubApiFactory();
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/printers");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -36,8 +38,8 @@ public sealed class SettingsAndAuthTests
         Assert.NotNull(setupStatus);
         Assert.True(setupStatus!.IsOnboardingRequired);
         Assert.False(setupStatus.HasApiKey);
-        Assert.True(setupStatus.HasDefaultPrinter);
-        Assert.Equal(2, setupStatus.Printers.Count);
+        Assert.False(setupStatus.HasDefaultPrinter);
+        Assert.Empty(setupStatus!.Printers);
     }
 
     [Fact]
@@ -90,7 +92,7 @@ public sealed class SettingsAndAuthTests
 
         var onboardingResponse = await client.PostAsJsonAsync(
             "/settings/onboarding",
-            new CompleteOnboardingRequest("bootstrapped-key", "printer_2"));
+            new CompleteOnboardingRequest("bootstrapped-key"));
 
         Assert.Equal(HttpStatusCode.OK, onboardingResponse.StatusCode);
 
@@ -99,17 +101,5 @@ public sealed class SettingsAndAuthTests
         Assert.NotNull(setupStatus);
         Assert.False(setupStatus!.IsOnboardingRequired);
         Assert.True(setupStatus.HasApiKey);
-        Assert.True(setupStatus.HasDefaultPrinter);
-        Assert.Contains(setupStatus.Printers, printer => printer.Id == "printer_2" && printer.IsDefault);
-
-        using var settingsRequest = new HttpRequestMessage(HttpMethod.Get, "/settings");
-        settingsRequest.Headers.Add("X-PrintHub-Api-Key", "bootstrapped-key");
-
-        var settingsResponse = await client.SendAsync(settingsRequest);
-        var settings = await settingsResponse.Content.ReadFromJsonAsync<PrintHubSettingsDto>();
-
-        Assert.Equal(HttpStatusCode.OK, settingsResponse.StatusCode);
-        Assert.NotNull(settings);
-        Assert.Equal("Label Printer", settings!.DefaultPrinterName);
     }
 }
