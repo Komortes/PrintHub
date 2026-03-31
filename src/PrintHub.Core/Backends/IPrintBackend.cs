@@ -7,6 +7,9 @@ public interface IPrintBackend
     ValueTask<IReadOnlyCollection<PrinterInfo>> GetPrintersAsync(
         CancellationToken cancellationToken = default);
 
+    ValueTask<PrintBackendDiagnostics> GetDiagnosticsAsync(
+        CancellationToken cancellationToken = default);
+
     ValueTask PrintAsync(
         PrintJob job,
         CancellationToken cancellationToken = default);

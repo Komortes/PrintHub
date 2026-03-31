@@ -137,6 +137,52 @@ public sealed class PrintJobsTests
     }
 
     [Fact]
+    public async Task ProcessingPrintJob_IsRecovered_AndCompleted_AfterHostRestart()
+    {
+        var tempRootPath = Path.Combine(
+            Path.GetTempPath(),
+            $"printhub-api-recovery-{Guid.NewGuid():N}");
+
+        try
+        {
+            string jobId;
+
+            using (var firstFactory = new PrintHubApiFactory(tempRootPath: tempRootPath))
+            using (var firstClient = firstFactory.CreateClient())
+            {
+                var createdJob = await CreateBase64JobAsync(firstClient, copies: 15, fileName: "recovery-processing.pdf");
+                jobId = createdJob.JobId;
+
+                var processingJob = await WaitForStatusAsync(firstClient, jobId, PrintJobStatus.Processing);
+                Assert.Equal(PrintJobStatus.Processing, processingJob.Status);
+            }
+
+            using var secondFactory = new PrintHubApiFactory(tempRootPath: tempRootPath);
+            using var secondClient = secondFactory.CreateClient();
+
+            var completedJob = await WaitForCompletionAsync(secondClient, jobId);
+
+            Assert.Equal(PrintJobStatus.Completed, completedJob.Status);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempRootPath))
+                {
+                    Directory.Delete(tempRootPath, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task PendingPrintJob_CanBeCanceled_WhileAnotherJobIsProcessing()
     {
         using var factory = new PrintHubApiFactory();
@@ -193,6 +239,100 @@ public sealed class PrintJobsTests
 
         Assert.Equal(PrintJobStatus.Completed, completedRetriedJob.Status);
         Assert.Equal(completedJob.PrinterName, completedRetriedJob.PrinterName);
+    }
+
+    [Fact]
+    public async Task PrintJobDetails_ReturnDocumentMetadata_AndRetryLineage()
+    {
+        using var factory = new PrintHubApiFactory();
+        using var client = factory.CreateClient();
+
+        var originalJob = await CreateBase64JobAsync(client, copies: 1, fileName: "details-source.pdf");
+        var completedOriginalJob = await WaitForCompletionAsync(client, originalJob.JobId);
+        Assert.Equal(PrintJobStatus.Completed, completedOriginalJob.Status);
+
+        using var retryRequest = new HttpRequestMessage(HttpMethod.Post, $"/print-jobs/{originalJob.JobId}/retry");
+        retryRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var retryResponse = await client.SendAsync(retryRequest);
+        Assert.Equal(HttpStatusCode.Created, retryResponse.StatusCode);
+
+        var retriedJob = await retryResponse.Content.ReadFromJsonAsync<CreatePrintJobResponse>(TestJson.SerializerOptions);
+        Assert.NotNull(retriedJob);
+
+        var completedRetriedJob = await WaitForCompletionAsync(client, retriedJob!.JobId);
+        Assert.Equal(PrintJobStatus.Completed, completedRetriedJob.Status);
+
+        using var originalDetailsRequest = new HttpRequestMessage(HttpMethod.Get, $"/print-jobs/{originalJob.JobId}/details");
+        originalDetailsRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var originalDetailsResponse = await client.SendAsync(originalDetailsRequest);
+        Assert.Equal(HttpStatusCode.OK, originalDetailsResponse.StatusCode);
+
+        var originalDetails = await originalDetailsResponse.Content.ReadFromJsonAsync<PrintJobDetailsDto>(TestJson.SerializerOptions);
+        Assert.NotNull(originalDetails);
+        Assert.Null(originalDetails!.ParentJobId);
+        Assert.Contains(retriedJob.JobId, originalDetails.RetryJobIds);
+        Assert.Equal(DocumentSourceType.Base64, originalDetails.Document.SourceType);
+        Assert.Equal(PrintDocumentFormat.Pdf, originalDetails.Document.Format);
+        Assert.Equal("details-source.pdf", originalDetails.Document.FileName);
+        Assert.True(originalDetails.Document.Exists);
+
+        using var retriedDetailsRequest = new HttpRequestMessage(HttpMethod.Get, $"/print-jobs/{retriedJob.JobId}/details");
+        retriedDetailsRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var retriedDetailsResponse = await client.SendAsync(retriedDetailsRequest);
+        Assert.Equal(HttpStatusCode.OK, retriedDetailsResponse.StatusCode);
+
+        var retriedDetails = await retriedDetailsResponse.Content.ReadFromJsonAsync<PrintJobDetailsDto>(TestJson.SerializerOptions);
+        Assert.NotNull(retriedDetails);
+        Assert.Equal(originalJob.JobId, retriedDetails!.ParentJobId);
+        Assert.Empty(retriedDetails.RetryJobIds);
+    }
+
+    [Fact]
+    public async Task StoredDocument_IsDeleted_OnlyAfterLastReferencingJobIsRemoved()
+    {
+        using var factory = new PrintHubApiFactory();
+        using var client = factory.CreateClient();
+
+        var originalJob = await CreateBase64JobAsync(client, copies: 1, fileName: "gc-source.pdf");
+        var completedOriginalJob = await WaitForCompletionAsync(client, originalJob.JobId);
+        Assert.Equal(PrintJobStatus.Completed, completedOriginalJob.Status);
+
+        using var retryRequest = new HttpRequestMessage(HttpMethod.Post, $"/print-jobs/{originalJob.JobId}/retry");
+        retryRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var retryResponse = await client.SendAsync(retryRequest);
+        Assert.Equal(HttpStatusCode.Created, retryResponse.StatusCode);
+
+        var retriedJob = await retryResponse.Content.ReadFromJsonAsync<CreatePrintJobResponse>(TestJson.SerializerOptions);
+        Assert.NotNull(retriedJob);
+
+        var completedRetriedJob = await WaitForCompletionAsync(client, retriedJob!.JobId);
+        Assert.Equal(PrintJobStatus.Completed, completedRetriedJob.Status);
+
+        var storedFiles = Directory.GetFiles(Path.Combine(factory.TempRootPath, "documents"));
+        Assert.Single(storedFiles);
+        var storedFilePath = storedFiles[0];
+
+        using (var deleteOriginalRequest = new HttpRequestMessage(HttpMethod.Delete, $"/print-jobs/{originalJob.JobId}"))
+        {
+            deleteOriginalRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+            var deleteOriginalResponse = await client.SendAsync(deleteOriginalRequest);
+            Assert.Equal(HttpStatusCode.NoContent, deleteOriginalResponse.StatusCode);
+        }
+
+        Assert.True(File.Exists(storedFilePath));
+
+        using (var deleteRetriedRequest = new HttpRequestMessage(HttpMethod.Delete, $"/print-jobs/{retriedJob.JobId}"))
+        {
+            deleteRetriedRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+            var deleteRetriedResponse = await client.SendAsync(deleteRetriedRequest);
+            Assert.Equal(HttpStatusCode.NoContent, deleteRetriedResponse.StatusCode);
+        }
+
+        Assert.False(File.Exists(storedFilePath));
     }
 
     [Fact]

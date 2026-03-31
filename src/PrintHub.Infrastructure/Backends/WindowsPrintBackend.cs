@@ -4,6 +4,7 @@ using System.Text.Json;
 using PrintHub.Contracts.Printers;
 using PrintHub.Core.Backends;
 using PrintHub.Core.Models;
+using DiagnosticSeverity = PrintHub.Core.Backends.PrintBackendDiagnosticSeverity;
 
 namespace PrintHub.Infrastructure.Backends;
 
@@ -57,6 +58,145 @@ public sealed class WindowsPrintBackend : IPrintBackend
                 printer.Default,
                 MapPrinterStatus(printer.PrinterStatus, printer.WorkOffline)))
             .ToArray();
+    }
+
+    public async ValueTask<PrintBackendDiagnostics> GetDiagnosticsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var powerShellCommand = ResolvePowerShellCommandName();
+
+        if (!OperatingSystem.IsWindows())
+        {
+            return new PrintBackendDiagnostics(
+                Backend: "windows-spooler",
+                IsSupported: false,
+                Summary: "Windows print backend is unavailable because PrintHub is not running on Windows.",
+                Checks:
+                [
+                    new PrintBackendDiagnosticCheck(
+                        "platform",
+                        DiagnosticSeverity.Warning,
+                        "Platform",
+                        "This backend can only run on Windows.",
+                        Environment.OSVersion.Platform.ToString())
+                ],
+                Printers: Array.Empty<PrinterDiagnosticInfo>(),
+                Recommendations:
+                [
+                    "Use the lp/cups backend on macOS/Linux or run PrintHub on Windows."
+                ]);
+        }
+
+        if (powerShellCommand is null)
+        {
+            return new PrintBackendDiagnostics(
+                Backend: "windows-spooler",
+                IsSupported: false,
+                Summary: "Windows print backend is unavailable because PowerShell was not found on PATH.",
+                Checks:
+                [
+                    new PrintBackendDiagnosticCheck(
+                        "powershell",
+                        DiagnosticSeverity.Error,
+                        "PowerShell",
+                        "Windows print diagnostics require PowerShell or PowerShell Core on PATH.",
+                        null)
+                ],
+                Printers: Array.Empty<PrinterDiagnosticInfo>(),
+                Recommendations:
+                [
+                    "Install PowerShell or ensure powershell/pwsh is available on PATH."
+                ]);
+        }
+
+        try
+        {
+            var printers = await GetPrintersAsync(cancellationToken);
+            var diagnosticsPrinters = printers
+                .Select(printer => new PrinterDiagnosticInfo(
+                    printer.Id,
+                    printer.Name,
+                    printer.IsDefault,
+                    printer.Status,
+                    printer.IsDefault
+                        ? "Default printer reported by Windows."
+                        : "Printer discovered from Windows printer spooler."))
+                .ToArray();
+            var defaultPrinter = diagnosticsPrinters.FirstOrDefault(printer => printer.IsDefault);
+
+            var summary = diagnosticsPrinters.Length == 0
+                ? "Windows print backend is available, but no printers were discovered."
+                : $"Windows print backend discovered {diagnosticsPrinters.Length} printer(s).";
+
+            var checks = new List<PrintBackendDiagnosticCheck>
+            {
+                new(
+                    "powershell",
+                    DiagnosticSeverity.Info,
+                    "PowerShell",
+                    "PowerShell is available for Windows printer discovery.",
+                    powerShellCommand),
+                new(
+                    "printer-count",
+                    diagnosticsPrinters.Length == 0 ? DiagnosticSeverity.Warning : DiagnosticSeverity.Info,
+                    "Discovered printers",
+                    diagnosticsPrinters.Length == 0
+                        ? "Windows did not return any configured printers."
+                        : $"Windows returned {diagnosticsPrinters.Length} configured printer(s).",
+                    diagnosticsPrinters.Length.ToString()),
+                new(
+                    "default-printer",
+                    defaultPrinter is null ? DiagnosticSeverity.Warning : DiagnosticSeverity.Info,
+                    "Default printer",
+                    defaultPrinter is null
+                        ? "Windows did not report a default printer."
+                        : $"Default printer is '{defaultPrinter.Name}'.",
+                    defaultPrinter?.Name)
+            };
+
+            var recommendations = new List<string>();
+
+            if (diagnosticsPrinters.Length == 0)
+            {
+                recommendations.Add("Add a printer in Windows Settings before using PrintHub.");
+            }
+
+            if (defaultPrinter is null && diagnosticsPrinters.Length > 0)
+            {
+                recommendations.Add("Set a default printer if you want to print without sending printerName.");
+            }
+
+            recommendations.Add("Make sure a PDF viewer with shell print support is installed for Windows PDF printing.");
+
+            return new PrintBackendDiagnostics(
+                Backend: "windows-spooler",
+                IsSupported: true,
+                Summary: summary,
+                Checks: checks,
+                Printers: diagnosticsPrinters,
+                Recommendations: recommendations);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or PlatformNotSupportedException)
+        {
+            return new PrintBackendDiagnostics(
+                Backend: "windows-spooler",
+                IsSupported: true,
+                Summary: "Windows print backend is available, but printer discovery failed.",
+                Checks:
+                [
+                    new PrintBackendDiagnosticCheck(
+                        "discovery-error",
+                        DiagnosticSeverity.Error,
+                        "Discovery error",
+                        exception.Message,
+                        null)
+                ],
+                Printers: Array.Empty<PrinterDiagnosticInfo>(),
+                Recommendations:
+                [
+                    "Check Windows printer configuration and verify that PowerShell can enumerate Win32_Printer."
+                ]);
+        }
     }
 
     public async ValueTask PrintAsync(

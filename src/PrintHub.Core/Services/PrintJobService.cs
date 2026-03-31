@@ -14,19 +14,22 @@ public sealed class PrintJobService : IPrintJobService
     private readonly IPrintHubSettingsService _settingsService;
     private readonly IPrintJobStore _store;
     private readonly IPrintJobQueue _queue;
+    private readonly IPrintDocumentGarbageCollector _documentGarbageCollector;
 
     public PrintJobService(
         TimeProvider timeProvider,
         IPrintDocumentPipeline documentPipeline,
         IPrintHubSettingsService settingsService,
         IPrintJobStore store,
-        IPrintJobQueue queue)
+        IPrintJobQueue queue,
+        IPrintDocumentGarbageCollector documentGarbageCollector)
     {
         _timeProvider = timeProvider;
         _documentPipeline = documentPipeline;
         _settingsService = settingsService;
         _store = store;
         _queue = queue;
+        _documentGarbageCollector = documentGarbageCollector;
     }
 
     public async ValueTask<CreatePrintJobResponse> CreateAsync(
@@ -65,6 +68,27 @@ public sealed class PrintJobService : IPrintJobService
     {
         var job = await _store.GetAsync(jobId, cancellationToken);
         return job?.ToDto();
+    }
+
+    public async ValueTask<PrintJobDetailsDto?> GetDetailsAsync(
+        string jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var job = await _store.GetAsync(jobId, cancellationToken);
+
+        if (job is null)
+        {
+            return null;
+        }
+
+        var jobs = await _store.ListAsync(cancellationToken);
+        var retryJobIds = jobs
+            .Where(candidate => string.Equals(candidate.ParentJobId, job.Id, StringComparison.Ordinal))
+            .OrderBy(candidate => candidate.CreatedAt)
+            .Select(candidate => candidate.Id)
+            .ToArray();
+
+        return job.ToDetailsDto(retryJobIds);
     }
 
     public async ValueTask<IReadOnlyCollection<PrintJobDto>> ListAsync(
@@ -153,6 +177,11 @@ public sealed class PrintJobService : IPrintJobService
         }
 
         var deleted = await _store.DeleteAsync(job.Id, cancellationToken);
+        if (deleted)
+        {
+            await _documentGarbageCollector.CollectAsync(cancellationToken);
+        }
+
         return deleted ? job.ToDto() : null;
     }
 
@@ -168,6 +197,11 @@ public sealed class PrintJobService : IPrintJobService
             {
                 deletedCount++;
             }
+        }
+
+        if (deletedCount > 0)
+        {
+            await _documentGarbageCollector.CollectAsync(cancellationToken);
         }
 
         return new CleanupPrintJobsResponse(deletedCount);
@@ -227,7 +261,8 @@ public sealed class PrintJobService : IPrintJobService
             job.PrinterName,
             job.Copies,
             job.Document,
-            _timeProvider.GetUtcNow());
+            _timeProvider.GetUtcNow(),
+            job.Id);
 
         await _store.AddAsync(retryJob, cancellationToken);
         await _queue.EnqueueAsync(retryJob.Id, cancellationToken);

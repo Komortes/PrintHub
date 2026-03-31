@@ -199,7 +199,8 @@ public sealed class JsonPrintJobStore : IPrintJobStore
         DateTimeOffset CreatedAt,
         DateTimeOffset? StartedAt,
         DateTimeOffset? CompletedAt,
-        string? ErrorMessage)
+        string? ErrorMessage,
+        string? ParentJobId = null)
     {
         public static StoredPrintJob FromModel(PrintJob job) =>
             new(
@@ -211,7 +212,8 @@ public sealed class JsonPrintJobStore : IPrintJobStore
                 job.CreatedAt,
                 job.StartedAt,
                 job.CompletedAt,
-                job.ErrorMessage);
+                job.ErrorMessage,
+                job.ParentJobId);
 
         public PrintJob ToModel() =>
             PrintJob.Restore(
@@ -219,6 +221,7 @@ public sealed class JsonPrintJobStore : IPrintJobStore
                 PrinterName,
                 Copies,
                 Document.ToModel(),
+                ParentJobId,
                 CreatedAt,
                 Status,
                 StartedAt,

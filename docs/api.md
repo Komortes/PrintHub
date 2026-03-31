@@ -9,9 +9,21 @@ PrintHub is a local print-job service running on `http://localhost:<port>` (defa
 | Request origin | Auth required |
 |---|---|
 | Same machine (localhost) | None — all endpoints open |
-| External machine | `X-PrintHub-Api-Key: <key>` header on every request |
+| External machine | `Authorization: Bearer <key>` preferred, custom API key header also supported |
 
-The header name is configurable in settings (`apiKeyHeaderName`). Default: `X-PrintHub-Api-Key`.
+Preferred auth format:
+
+```http
+Authorization: Bearer my-secret-key
+```
+
+Legacy compatibility header:
+
+```http
+X-PrintHub-Api-Key: my-secret-key
+```
+
+The custom header name remains configurable in settings (`apiKeyHeaderName`). Default: `X-PrintHub-Api-Key`.
 
 If the API key is not yet configured, external requests receive **503 Service Unavailable** until onboarding is completed.
 

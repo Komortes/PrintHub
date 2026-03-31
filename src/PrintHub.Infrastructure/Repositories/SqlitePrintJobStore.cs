@@ -114,6 +114,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                     DocumentStoredPath,
                     DocumentSizeBytes,
                     DocumentSourceUrl,
+                    ParentJobId,
                     Status,
                     CreatedAtUnixMs,
                     StartedAtUnixMs,
@@ -157,6 +158,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                     DocumentStoredPath,
                     DocumentSizeBytes,
                     DocumentSourceUrl,
+                    ParentJobId,
                     Status,
                     CreatedAtUnixMs,
                     StartedAtUnixMs,
@@ -206,6 +208,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                     DocumentStoredPath = $DocumentStoredPath,
                     DocumentSizeBytes = $DocumentSizeBytes,
                     DocumentSourceUrl = $DocumentSourceUrl,
+                    ParentJobId = $ParentJobId,
                     Status = $Status,
                     CreatedAtUnixMs = $CreatedAtUnixMs,
                     StartedAtUnixMs = $StartedAtUnixMs,
@@ -257,6 +260,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                     DocumentStoredPath TEXT NOT NULL,
                     DocumentSizeBytes INTEGER NOT NULL,
                     DocumentSourceUrl TEXT NULL,
+                    ParentJobId TEXT NULL,
                     Status TEXT NOT NULL,
                     CreatedAtUnixMs INTEGER NOT NULL,
                     StartedAtUnixMs INTEGER NULL,
@@ -270,6 +274,8 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
 
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
+
+        await EnsureColumnAsync(connection, "PrintJobs", "ParentJobId", "TEXT NULL", cancellationToken);
 
         if (migratedJobs.Count > 0)
         {
@@ -372,6 +378,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                 DocumentStoredPath,
                 DocumentSizeBytes,
                 DocumentSourceUrl,
+                ParentJobId,
                 Status,
                 CreatedAtUnixMs,
                 StartedAtUnixMs,
@@ -388,6 +395,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                 $DocumentStoredPath,
                 $DocumentSizeBytes,
                 $DocumentSourceUrl,
+                $ParentJobId,
                 $Status,
                 $CreatedAtUnixMs,
                 $StartedAtUnixMs,
@@ -424,6 +432,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                 DocumentStoredPath,
                 DocumentSizeBytes,
                 DocumentSourceUrl,
+                ParentJobId,
                 Status,
                 CreatedAtUnixMs,
                 StartedAtUnixMs,
@@ -440,6 +449,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                 $DocumentStoredPath,
                 $DocumentSizeBytes,
                 $DocumentSourceUrl,
+                $ParentJobId,
                 $Status,
                 $CreatedAtUnixMs,
                 $StartedAtUnixMs,
@@ -463,6 +473,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
         command.Parameters.AddWithValue("$DocumentStoredPath", job.Document.StoredPath);
         command.Parameters.AddWithValue("$DocumentSizeBytes", job.Document.SizeBytes);
         command.Parameters.AddWithValue("$DocumentSourceUrl", (object?)job.Document.SourceUrl ?? DBNull.Value);
+        command.Parameters.AddWithValue("$ParentJobId", (object?)job.ParentJobId ?? DBNull.Value);
         command.Parameters.AddWithValue("$Status", job.Status.ToString());
         command.Parameters.AddWithValue("$CreatedAtUnixMs", job.CreatedAt.ToUnixTimeMilliseconds());
         command.Parameters.AddWithValue("$StartedAtUnixMs", job.StartedAt?.ToUnixTimeMilliseconds() ?? (object)DBNull.Value);
@@ -492,6 +503,9 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                 : reader.GetString(reader.GetOrdinal("PrinterName")),
             reader.GetInt32(reader.GetOrdinal("Copies")),
             document,
+            reader.IsDBNull(reader.GetOrdinal("ParentJobId"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("ParentJobId")),
             DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(reader.GetOrdinal("CreatedAtUnixMs"))),
             status,
             ReadNullableUnixMilliseconds(reader, "StartedAtUnixMs"),
@@ -514,6 +528,32 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
             ? path
             : Path.GetFullPath(Path.Combine(contentRootPath, path));
 
+    private static async Task EnsureColumnAsync(
+        SqliteConnection connection,
+        string tableName,
+        string columnName,
+        string columnDefinition,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({tableName});";
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            if (string.Equals(reader.GetString(reader.GetOrdinal("name")), columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        await reader.CloseAsync();
+
+        await using var alterCommand = connection.CreateCommand();
+        alterCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};";
+        await alterCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private sealed record StoredPrintJob(
         string Id,
         string? PrinterName,
@@ -523,7 +563,8 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
         DateTimeOffset CreatedAt,
         DateTimeOffset? StartedAt,
         DateTimeOffset? CompletedAt,
-        string? ErrorMessage)
+        string? ErrorMessage,
+        string? ParentJobId = null)
     {
         public PrintJob ToModel() =>
             PrintJob.Restore(
@@ -531,6 +572,7 @@ public sealed class SqlitePrintJobStore : IPrintJobStore
                 PrinterName,
                 Copies,
                 Document.ToModel(),
+                ParentJobId,
                 CreatedAt,
                 Status,
                 StartedAt,

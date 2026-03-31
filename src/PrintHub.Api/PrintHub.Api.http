@@ -70,6 +70,18 @@ X-PrintHub-Api-Key: {{ApiKey}}
 
 ###
 
+GET {{PrintHub.Api_HostAddress}}/printers/diagnostics
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/diagnostics/report
+Accept: text/plain
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
 PUT {{PrintHub.Api_HostAddress}}/printers/printer_1/default
 Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}
@@ -136,6 +148,12 @@ X-PrintHub-Api-Key: {{ApiKey}}
 ###
 
 GET {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}
+Accept: application/json
+X-PrintHub-Api-Key: {{ApiKey}}
+
+###
+
+GET {{PrintHub.Api_HostAddress}}/print-jobs/{{jobId}}/details
 Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}
 

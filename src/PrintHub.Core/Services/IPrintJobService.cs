@@ -12,6 +12,10 @@ public interface IPrintJobService
         string jobId,
         CancellationToken cancellationToken = default);
 
+    ValueTask<PrintJobDetailsDto?> GetDetailsAsync(
+        string jobId,
+        CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyCollection<PrintJobDto>> ListAsync(
         CancellationToken cancellationToken = default);
 

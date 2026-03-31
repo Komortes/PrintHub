@@ -9,6 +9,7 @@ public sealed class PrintJob
         string? printerName,
         int copies,
         PrintDocument document,
+        string? parentJobId,
         DateTimeOffset createdAt,
         PrintJobStatus status,
         DateTimeOffset? startedAt,
@@ -19,6 +20,7 @@ public sealed class PrintJob
         PrinterName = printerName;
         Copies = copies;
         Document = document;
+        ParentJobId = Normalize(parentJobId);
         CreatedAt = createdAt;
         Status = status;
         StartedAt = startedAt;
@@ -33,6 +35,8 @@ public sealed class PrintJob
     public int Copies { get; }
 
     public PrintDocument Document { get; }
+
+    public string? ParentJobId { get; }
 
     public PrintJobStatus Status { get; private set; }
 
@@ -49,7 +53,8 @@ public sealed class PrintJob
         string? printerName,
         int copies,
         PrintDocument document,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        string? parentJobId = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -68,6 +73,7 @@ public sealed class PrintJob
             Normalize(printerName),
             copies,
             document,
+            parentJobId,
             createdAt,
             PrintJobStatus.Pending,
             startedAt: null,
@@ -80,6 +86,7 @@ public sealed class PrintJob
         string? printerName,
         int copies,
         PrintDocument document,
+        string? parentJobId,
         DateTimeOffset createdAt,
         PrintJobStatus status,
         DateTimeOffset? startedAt,
@@ -98,6 +105,7 @@ public sealed class PrintJob
             Normalize(printerName),
             copies,
             document,
+            parentJobId,
             createdAt,
             status,
             startedAt,
@@ -157,6 +165,21 @@ public sealed class PrintJob
         Status = PrintJobStatus.Canceled;
         CompletedAt = completedAt;
         ErrorMessage = Normalize(errorMessage);
+
+        return true;
+    }
+
+    public bool TryRestorePendingAfterRecovery()
+    {
+        if (Status is PrintJobStatus.Completed or PrintJobStatus.Failed or PrintJobStatus.Canceled)
+        {
+            return false;
+        }
+
+        Status = PrintJobStatus.Pending;
+        StartedAt = null;
+        CompletedAt = null;
+        ErrorMessage = null;
 
         return true;
     }

@@ -1,6 +1,7 @@
 using PrintHub.Contracts.Printers;
 using PrintHub.Core.Backends;
 using PrintHub.Core.Models;
+using DiagnosticSeverity = PrintHub.Core.Backends.PrintBackendDiagnosticSeverity;
 
 namespace PrintHub.Infrastructure.Backends;
 
@@ -15,6 +16,44 @@ public sealed class MockPrintBackend : IPrintBackend
     public ValueTask<IReadOnlyCollection<PrinterInfo>> GetPrintersAsync(
         CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(Printers);
+
+    public ValueTask<PrintBackendDiagnostics> GetDiagnosticsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var printers = Printers
+            .Select(printer => new PrinterDiagnosticInfo(
+                printer.Id,
+                printer.Name,
+                printer.IsDefault,
+                printer.Status,
+                "Mock printer exposed by the development backend."))
+            .ToArray();
+
+        return ValueTask.FromResult(new PrintBackendDiagnostics(
+            Backend: "mock",
+            IsSupported: true,
+            Summary: "Mock backend is active. PrintHub is not using the operating system printer stack.",
+            Checks:
+            [
+                new PrintBackendDiagnosticCheck(
+                    "backend-mode",
+                    DiagnosticSeverity.Info,
+                    "Backend mode",
+                    "PrintHub is running against the built-in mock backend.",
+                    "Mock"),
+                new PrintBackendDiagnosticCheck(
+                    "printer-count",
+                    DiagnosticSeverity.Info,
+                    "Mock printers",
+                    $"The mock backend exposes {printers.Length} virtual printers.",
+                    printers.Length.ToString())
+            ],
+            Printers: printers,
+            Recommendations:
+            [
+                "Switch PrintHub:BackendMode to Auto or System to use real OS printers."
+            ]));
+    }
 
     public async ValueTask PrintAsync(
         PrintJob job,

@@ -1,4 +1,6 @@
 using PrintHub.Core.Backends;
+using PrintHub.Core.Documents;
+using PrintHub.Contracts.PrintJobs;
 using PrintHub.Core.Queues;
 using PrintHub.Core.Repositories;
 
@@ -12,6 +14,7 @@ public sealed class PrintJobWorker : BackgroundService
     private readonly IPrintJobQueue _queue;
     private readonly IPrintJobStore _store;
     private readonly IPrintBackend _backend;
+    private readonly IPrintDocumentGarbageCollector _documentGarbageCollector;
     private readonly ILogger<PrintJobWorker> _logger;
 
     public PrintJobWorker(
@@ -19,18 +22,21 @@ public sealed class PrintJobWorker : BackgroundService
         IPrintJobQueue queue,
         IPrintJobStore store,
         IPrintBackend backend,
+        IPrintDocumentGarbageCollector documentGarbageCollector,
         ILogger<PrintJobWorker> logger)
     {
         _timeProvider = timeProvider;
         _queue = queue;
         _store = store;
         _backend = backend;
+        _documentGarbageCollector = documentGarbageCollector;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Print job worker started.");
+        await RecoverJobsAndCollectDocumentsAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -50,6 +56,46 @@ public sealed class PrintJobWorker : BackgroundService
         }
 
         _logger.LogInformation("Print job worker stopped.");
+    }
+
+    private async Task RecoverJobsAndCollectDocumentsAsync(CancellationToken cancellationToken)
+    {
+        var jobs = await _store.ListAsync(cancellationToken);
+        var recoveredJobs = 0;
+
+        foreach (var job in jobs
+                     .Where(job => job.Status is PrintJobStatus.Pending or PrintJobStatus.Processing)
+                     .OrderBy(job => job.CreatedAt))
+        {
+            var wasProcessing = job.Status == PrintJobStatus.Processing;
+
+            if (!job.TryRestorePendingAfterRecovery())
+            {
+                continue;
+            }
+
+            if (wasProcessing)
+            {
+                await _store.UpdateAsync(job, cancellationToken);
+            }
+
+            await _queue.EnqueueAsync(job.Id, cancellationToken);
+            recoveredJobs++;
+        }
+
+        if (recoveredJobs > 0)
+        {
+            _logger.LogInformation("Recovered {RecoveredJobsCount} print job(s) into the queue after startup.", recoveredJobs);
+        }
+
+        var gcResult = await _documentGarbageCollector.CollectAsync(cancellationToken);
+        if (gcResult.DeletedFilesCount > 0)
+        {
+            _logger.LogInformation(
+                "Deleted {DeletedFilesCount} orphaned document file(s) and reclaimed {ReclaimedBytes} bytes.",
+                gcResult.DeletedFilesCount,
+                gcResult.ReclaimedBytes);
+        }
     }
 
     private async Task ProcessNextJobAsync(CancellationToken cancellationToken)
