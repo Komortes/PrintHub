@@ -96,6 +96,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$SCRIPT_DIR/'"$bundle_name"'/Contents/Resources/app"
 exec "$APP_DIR/stop-printhub.sh" "$@"'
 
+  if [[ -d "$tray_install_dir" ]]; then
+    write_executable_file "$launchers_dir/Open PrintHub Tray.command" '#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+open "$SCRIPT_DIR/PrintHub Tray.app"'
+  fi
+
   write_executable_file "$launchers_dir/Uninstall PrintHub.command" '#!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -106,6 +113,7 @@ exec "$APP_DIR/uninstall-printhub.sh" "$SCRIPT_DIR/'"$bundle_name"'"'
   echo "  App bundle:   $install_dir"
   if [[ -d "$tray_install_dir" ]]; then
     echo "  Tray app:     $tray_install_dir"
+    echo "  Tray opener:  $launchers_dir/Open PrintHub Tray.command"
   fi
   echo "  Stop script:  $launchers_dir/Stop PrintHub.command"
   echo "  Uninstall:    $launchers_dir/Uninstall PrintHub.command"

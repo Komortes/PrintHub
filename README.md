@@ -6,6 +6,7 @@ Quick links:
 
 - [User guide](./docs/user-guide.md)
 - [API reference](./docs/api.md)
+- [Release guide](./docs/release.md)
 
 ## Run in development
 
@@ -22,6 +23,11 @@ On first launch the dashboard opens with a built-in onboarding flow:
 - generate or enter the API key
 - optionally enable auto-start for the current user session
 - finish setup and then add printers from the local dashboard
+
+For external integrations, use:
+
+- `Authorization: Bearer <api-key>` as the preferred auth style
+- the configured custom API key header only for legacy compatibility
 
 ## Runtime data location
 
@@ -69,6 +75,16 @@ Windows PowerShell:
 
 Both scripts publish `src/PrintHub.Api` into `output/publish/<runtime>`.
 
+For a distributable archive intended for end users, use:
+
+```bash
+./scripts/release/build-release.sh
+```
+
+```powershell
+./scripts/release/build-release.ps1
+```
+
 Override self-contained mode only if you explicitly want a framework-dependent build:
 
 ```bash
@@ -96,6 +112,7 @@ The launcher:
 
 On macOS the publish output may also contain `PrintHub Tray.app`. This is a small
 menu bar helper that can start, stop and reopen PrintHub without keeping a terminal open.
+The publish folder also includes `open-printhub-tray.command` as a one-click launcher.
 
 You can also override the startup URL manually:
 
@@ -126,12 +143,36 @@ After install on macOS you get:
 
 - `~/Applications/PrintHub.app`
 - `~/Applications/PrintHub Tray.app` when the tray helper was built
+- `~/Applications/Open PrintHub Tray.command` when the tray helper was built
 - `~/Applications/Stop PrintHub.command`
 - `~/Applications/Uninstall PrintHub.command`
 
 On Windows the installer also creates Start Menu shortcuts for start, stop and uninstall.
 
 The installer works in user space and does not require admin rights.
+
+## Release packaging
+
+Distributable release artifacts are created in `output/release/<runtime>`.
+
+Each release package includes:
+
+- self-contained payload
+- end-user docs
+- release manifest
+- checksum
+
+On macOS the staged release also contains an installable `Applications/PrintHub.app`.
+
+If you plan to distribute the macOS build outside local testing, follow:
+
+- [Release guide](./docs/release.md)
+
+That flow covers:
+
+- signing with `codesign`
+- notarization with `notarytool`
+- stapling the notarization ticket back onto the app bundle
 
 ## Auto-start
 

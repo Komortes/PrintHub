@@ -1,10 +1,26 @@
 import AppKit
 import Foundation
 
+private struct PrintHubSettings {
+    let port: Int
+    let apiKey: String?
+    let apiKeyHeaderName: String?
+}
+
+private struct PrintQueueStatus: Decodable {
+    let isPaused: Bool
+    let queuedCount: Int
+}
+
+private struct PrintJobSummary: Decodable {
+    let status: String
+}
+
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let statusMenuItem = NSMenuItem(title: "Status: checking...", action: nil, keyEquivalent: "")
+    private let queueMenuItem = NSMenuItem(title: "Queue: checking...", action: nil, keyEquivalent: "")
     private var statusTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -15,13 +31,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
         menu.addItem(statusMenuItem)
+        menu.addItem(queueMenuItem)
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(createMenuItem("Open Dashboard", #selector(openDashboard), "o"))
         menu.addItem(createMenuItem("Start in Background", #selector(startInBackground), "s"))
+        menu.addItem(createMenuItem("Restart PrintHub", #selector(restartPrintHub), "r"))
         menu.addItem(createMenuItem("Stop PrintHub", #selector(stopPrintHub), "x"))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(createMenuItem("Open Runtime Folder", #selector(openRuntimeFolder), "r"))
+        menu.addItem(createMenuItem("Open Runtime Folder", #selector(openRuntimeFolder), "f"))
+        menu.addItem(createMenuItem("Open Logs Folder", #selector(openLogsFolder), "l"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(createMenuItem("Quit Tray", #selector(quitTray), "q"))
 
@@ -49,10 +68,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         runScript(named: "stop-printhub.sh", openBrowser: false)
     }
 
+    @objc private func restartPrintHub() {
+        runScript(named: "stop-printhub.sh", openBrowser: false)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            self?.runScript(named: "run-printhub.sh", openBrowser: false)
+        }
+    }
+
     @objc private func openRuntimeFolder() {
         let runtimeURL = resolvePrintHubHome()
         try? FileManager.default.createDirectory(at: runtimeURL, withIntermediateDirectories: true)
         NSWorkspace.shared.open(runtimeURL)
+    }
+
+    @objc private func openLogsFolder() {
+        let logsURL = resolvePrintHubHome()
+            .appendingPathComponent("data", isDirectory: true)
+            .appendingPathComponent("logs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: logsURL, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(logsURL)
     }
 
     @objc private func quitTray() {
@@ -89,6 +124,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         do {
             try process.run()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.refreshStatus()
+            }
         } catch {
             showAlert(title: "PrintHub Tray", message: "Failed to run \(scriptName): \(error.localizedDescription)")
         }
@@ -96,9 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refreshStatus() {
         statusMenuItem.title = "Status: checking..."
+        queueMenuItem.title = "Queue: checking..."
 
         guard let healthURL = URL(string: "\(resolveBaseURL())/health") else {
             statusMenuItem.title = "Status: invalid URL"
+            queueMenuItem.title = "Queue: invalid URL"
             return
         }
 
@@ -106,21 +146,123 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 if let error {
                     self?.statusMenuItem.title = "Status: stopped (\(error.localizedDescription))"
+                    self?.queueMenuItem.title = "Queue: unavailable"
                     return
                 }
 
                 guard let httpResponse = response as? HTTPURLResponse else {
                     self?.statusMenuItem.title = "Status: unknown"
+                    self?.queueMenuItem.title = "Queue: unknown"
                     return
                 }
 
-                self?.statusMenuItem.title = httpResponse.statusCode == 200
-                    ? "Status: running"
-                    : "Status: unavailable (\(httpResponse.statusCode))"
+                guard httpResponse.statusCode == 200 else {
+                    self?.statusMenuItem.title = "Status: unavailable (\(httpResponse.statusCode))"
+                    self?.queueMenuItem.title = "Queue: unavailable"
+                    return
+                }
+
+                self?.statusMenuItem.title = "Status: running"
+                self?.refreshQueueSummary()
             }
         }
 
         task.resume()
+    }
+
+    private func refreshQueueSummary() {
+        guard let settings = resolveSettings(),
+              let queueURL = URL(string: "\(resolveBaseURL())/print-jobs/queue"),
+              let activeJobsURL = URL(string: "\(resolveBaseURL())/print-jobs?activeOnly=true&limit=100") else {
+            queueMenuItem.title = "Queue: auth unavailable"
+            return
+        }
+
+        let group = DispatchGroup()
+        var queueStatus: PrintQueueStatus?
+        var activeJobs: [PrintJobSummary] = []
+        var queueError: Error?
+        var jobsError: Error?
+
+        group.enter()
+        performJsonRequest(url: queueURL, settings: settings) { (result: Result<PrintQueueStatus, Error>) in
+            defer { group.leave() }
+            switch result {
+            case .success(let value):
+                queueStatus = value
+            case .failure(let error):
+                queueError = error
+            }
+        }
+
+        group.enter()
+        performJsonRequest(url: activeJobsURL, settings: settings) { (result: Result<[PrintJobSummary], Error>) in
+            defer { group.leave() }
+            switch result {
+            case .success(let value):
+                activeJobs = value
+            case .failure(let error):
+                jobsError = error
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+
+            if queueError != nil || jobsError != nil {
+                self.queueMenuItem.title = "Queue: limited status"
+                return
+            }
+
+            guard let queueStatus else {
+                self.queueMenuItem.title = "Queue: unavailable"
+                return
+            }
+
+            let processingCount = activeJobs.filter { $0.status.lowercased() == "processing" }.count
+            let pendingCount = activeJobs.filter { $0.status.lowercased() == "pending" }.count
+            let stateLabel = queueStatus.isPaused ? "paused" : "active"
+
+            self.queueMenuItem.title = "Queue: \(stateLabel), queued \(queueStatus.queuedCount), pending \(pendingCount), printing \(processingCount)"
+            self.statusItem.button?.title = processingCount > 0
+                ? "⎙ PrintHub \(processingCount)"
+                : "⎙ PrintHub"
+        }
+    }
+
+    private func performJsonRequest<T: Decodable>(
+        url: URL,
+        settings: PrintHubSettings,
+        completion: @escaping (Result<T, Error>) -> Void
+    ) {
+        var request = URLRequest(url: url)
+        if let apiKey = settings.apiKey, !apiKey.isEmpty {
+            request.setValue(apiKey, forHTTPHeaderField: settings.apiKeyHeaderName ?? "X-PrintHub-Api-Key")
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                completion(.failure(NSError(domain: "PrintHubTray", code: 1)))
+                return
+            }
+
+            guard let data else {
+                completion(.failure(NSError(domain: "PrintHubTray", code: 2)))
+                return
+            }
+
+            do {
+                let decoded = try JSONDecoder().decode(T.self, from: data)
+                completion(.success(decoded))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
     }
 
     private func resolveBaseURL() -> String {
@@ -128,17 +270,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return explicitUrl
         }
 
+        if let settings = resolveSettings() {
+            return "http://127.0.0.1:\(settings.port)"
+        }
+
+        return "http://127.0.0.1:5051"
+    }
+
+    private func resolveSettings() -> PrintHubSettings? {
         let settingsURL = resolvePrintHubHome()
             .appendingPathComponent("data", isDirectory: true)
             .appendingPathComponent("settings.json")
 
-        if let data = try? Data(contentsOf: settingsURL),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let port = json["port"] as? NSNumber {
-            return "http://127.0.0.1:\(port)"
+        guard let data = try? Data(contentsOf: settingsURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
         }
 
-        return "http://127.0.0.1:5051"
+        let port = (json["port"] as? NSNumber)?.intValue ?? 5051
+        let apiKey = json["apiKey"] as? String
+        let apiKeyHeaderName = json["apiKeyHeaderName"] as? String
+
+        return PrintHubSettings(
+            port: port,
+            apiKey: apiKey,
+            apiKeyHeaderName: apiKeyHeaderName)
     }
 
     private func resolvePrintHubHome() -> URL {

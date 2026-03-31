@@ -11,6 +11,7 @@ install_support_scripts() {
   cp "$ROOT_DIR/scripts/launcher/stop-printhub.ps1" "$OUTPUT_DIR/stop-printhub.ps1"
   cp "$ROOT_DIR/scripts/launcher/run-printhub.command" "$OUTPUT_DIR/run-printhub.command"
   cp "$ROOT_DIR/scripts/launcher/stop-printhub.command" "$OUTPUT_DIR/stop-printhub.command"
+  cp "$ROOT_DIR/scripts/launcher/open-printhub-tray.command" "$OUTPUT_DIR/open-printhub-tray.command"
   cp "$ROOT_DIR/scripts/installers/install-printhub.sh" "$OUTPUT_DIR/install-printhub.sh"
   cp "$ROOT_DIR/scripts/installers/uninstall-printhub.sh" "$OUTPUT_DIR/uninstall-printhub.sh"
   cp "$ROOT_DIR/scripts/installers/install-printhub.ps1" "$OUTPUT_DIR/install-printhub.ps1"
@@ -22,6 +23,7 @@ install_support_scripts() {
     "$OUTPUT_DIR/stop-printhub.sh" \
     "$OUTPUT_DIR/run-printhub.command" \
     "$OUTPUT_DIR/stop-printhub.command" \
+    "$OUTPUT_DIR/open-printhub-tray.command" \
     "$OUTPUT_DIR/install-printhub.sh" \
     "$OUTPUT_DIR/uninstall-printhub.sh" \
     "$OUTPUT_DIR/install-printhub.command" \
@@ -120,4 +122,10 @@ On macOS you can also double-click:
 
 If the tray helper was built, the publish folder also contains:
   $OUTPUT_DIR/PrintHub Tray.app
+
+Open the tray helper directly with:
+  $OUTPUT_DIR/open-printhub-tray.command
+
+Build a distributable release package with:
+  $ROOT_DIR/scripts/release/build-release.sh $RUNTIME
 EOF
