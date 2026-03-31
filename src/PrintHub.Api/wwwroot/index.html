@@ -125,6 +125,13 @@
       flex-shrink: 0;
     }
 
+    .lang-select {
+      width: auto;
+      min-width: 72px;
+      padding: 5px 26px 5px 10px;
+      font-size: 12px;
+    }
+
     /* ── BUTTONS ──────────────────────────────── */
     .btn {
       display: inline-flex;
@@ -585,6 +592,35 @@
 
     .job-error { font-size: 11px; color: var(--red); margin-top: 2px; line-height: 1.3; }
     .job-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .details-stack { display: flex; flex-direction: column; gap: 12px; }
+    .details-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.02);
+      padding: 10px 12px;
+    }
+    .details-card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 8px 12px;
+    }
+    .details-label { font-size: 11px; color: var(--muted); }
+    .details-value { font-size: 12px; color: var(--text); word-break: break-word; }
+    .details-actions-inline { display: flex; gap: 6px; flex-wrap: wrap; }
+    .details-code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
 
     .empty-state {
       padding: 40px 20px;
@@ -897,6 +933,83 @@
       background: var(--border);
     }
 
+    .diag-shell {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+    }
+
+    .diag-summary {
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .diag-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .diag-item {
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.025);
+    }
+
+    .diag-item.info { border-color: rgba(59,130,246,0.18); }
+    .diag-item.warning { border-color: rgba(245,158,11,0.22); }
+    .diag-item.error { border-color: rgba(239,68,68,0.22); }
+
+    .diag-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .diag-item-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .diag-item-copy {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .diag-item-value {
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .diag-rec-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .diag-rec {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
     /* ── RESPONSIVE ───────────────────────────── */
     @media (max-width: 860px) {
       .setup-card { grid-template-columns: 1fr; }
@@ -920,7 +1033,7 @@
   </div>
   <div class="header-health">
     <span class="status-dot" id="health-dot"></span>
-    <span id="health-label">Проверка</span>
+    <span id="health-label" data-i18n="common.loading">Проверка</span>
   </div>
   <div class="header-meta">
     <span class="hchip" id="service-chip">PrintHub</span>
@@ -928,16 +1041,22 @@
     <span class="hchip" id="storage-chip">data/documents</span>
   </div>
   <div class="header-actions">
-    <button class="btn btn-sm" type="button" onclick="refreshAll()">⟳ Обновить</button>
-    <button class="btn btn-sm btn-ghost" type="button" onclick="openPanel('settings')">⚙ Настройки</button>
+    <select id="language-select" class="lang-select" onchange="changeLanguage(this.value)" title="Language">
+      <option value="ru">RU</option>
+      <option value="en">EN</option>
+      <option value="cs">CS</option>
+      <option value="uk">UK</option>
+    </select>
+    <button class="btn btn-sm" type="button" onclick="refreshAll()" data-i18n="header.refresh">⟳ Обновить</button>
+    <button class="btn btn-sm btn-ghost" type="button" onclick="openPanel('settings')" data-i18n="header.settings">⚙ Настройки</button>
     <button class="btn btn-sm btn-ghost" id="printers-btn" type="button" onclick="openPanel('printers')">🖨 —</button>
   </div>
 </header>
 
 <!-- ── BANNER ─────────────────────────────────────────────── -->
 <div id="banner">
-  ⚠ API ключ не настроен. Защищённые endpoint-ы недоступны.
-  <a onclick="openSettings()">Настроить</a>
+  <span data-i18n="banner.missingApiKey">⚠ API ключ не настроен. Защищённые endpoint-ы недоступны.</span>
+  <a onclick="openSettings()" data-i18n="banner.configure">Настроить</a>
 </div>
 
 <!-- ── BODY ───────────────────────────────────────────────── -->
@@ -947,7 +1066,7 @@
     <div class="jobs-panel">
 
       <div class="jobs-header">
-        <span style="flex:1;">Очередь и история печати</span>
+        <span style="flex:1;" data-i18n="jobs.title">Очередь и история печати</span>
         <div id="jobs-summary" class="jobs-counts">
           <span class="count-chip pending">ожид 0</span>
           <span class="count-chip processing">печать 0</span>
@@ -958,30 +1077,30 @@
       </div>
 
       <div class="jobs-toolbar">
-        <label for="status-filter">Фильтр</label>
+        <label for="status-filter" data-i18n="jobs.filter">Фильтр</label>
         <select id="status-filter" onchange="loadJobs()">
-          <option value="">Все задания</option>
-          <option value="pending">Ожидание</option>
-          <option value="processing">Печать</option>
-          <option value="completed">Готово</option>
-          <option value="failed">Ошибка</option>
-          <option value="canceled">Отменено</option>
+          <option value="" data-i18n="jobs.allJobs">Все задания</option>
+          <option value="pending" data-i18n="jobs.pending">Ожидание</option>
+          <option value="processing" data-i18n="jobs.processing">Печать</option>
+          <option value="completed" data-i18n="jobs.completed">Готово</option>
+          <option value="failed" data-i18n="jobs.failed">Ошибка</option>
+          <option value="canceled" data-i18n="jobs.canceled">Отменено</option>
         </select>
         <label class="toggle-row" style="margin-left:6px;">
           <input type="checkbox" id="auto-refresh-toggle" checked onchange="startAutoRefresh()">
-          Авто 5с
+          <span data-i18n="jobs.autoRefresh">Авто 5с</span>
         </label>
-        <span class="status-pill unsupported" id="queue-status-pill">Queue ?</span>
-        <button class="btn btn-sm btn-ghost" id="queue-toggle-btn" type="button" onclick="toggleQueuePause()">Пауза</button>
-        <button class="btn btn-sm btn-ghost" id="clear-queue-btn" type="button" onclick="clearPendingQueue()">Очистить очередь</button>
-        <button class="btn btn-sm btn-ghost" id="cleanup-jobs-btn" type="button" onclick="cleanupFinishedJobs()">Очистить историю</button>
-        <button class="btn btn-sm btn-ghost" id="refresh-btn" type="button" onclick="loadJobs()">⟳ Обновить</button>
+        <span class="status-pill unsupported" id="queue-status-pill" data-i18n="queue.initial">Queue ?</span>
+        <button class="btn btn-sm btn-ghost" id="queue-toggle-btn" type="button" onclick="toggleQueuePause()" data-i18n="jobs.pause">Пауза</button>
+        <button class="btn btn-sm btn-ghost" id="clear-queue-btn" type="button" onclick="clearPendingQueue()" data-i18n="jobs.clearQueue">Очистить очередь</button>
+        <button class="btn btn-sm btn-ghost" id="cleanup-jobs-btn" type="button" onclick="cleanupFinishedJobs()" data-i18n="jobs.cleanupHistory">Очистить историю</button>
+        <button class="btn btn-sm btn-ghost" id="refresh-btn" type="button" onclick="loadJobs()" data-i18n="jobs.refresh">⟳ Обновить</button>
       </div>
 
-      <div id="jobs-meta" class="jobs-meta">Ожидание первой загрузки.</div>
+      <div id="jobs-meta" class="jobs-meta" data-i18n="jobs.initialMeta">Ожидание первой загрузки.</div>
 
       <div id="jobs-container" class="jobs-table-shell">
-        <div class="empty-state">Загрузка заданий...</div>
+        <div class="empty-state" data-i18n="jobs.loading">Загрузка заданий...</div>
       </div>
 
     </div>
@@ -991,7 +1110,7 @@
 </div><!-- .app-wrap -->
 
 <!-- ── FAB ───────────────────────────────────────────────── -->
-<button class="fab" type="button" onclick="openPanel('job')">⎙ Новое задание</button>
+<button class="fab" type="button" onclick="openPanel('job')" data-i18n="fab.newJob">⎙ Новое задание</button>
 
 <!-- ── PANEL BACKDROP ────────────────────────────────────── -->
 <div id="panel-backdrop" class="panel-backdrop" onclick="closePanel()"></div>
@@ -999,27 +1118,37 @@
 <!-- ── PANEL: PRINTERS ───────────────────────────────────── -->
 <div id="panel-printers" class="slide-panel" role="dialog" aria-label="Принтеры">
   <div class="slide-panel-header">
-    <span class="slide-panel-title">Принтеры</span>
-    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть">✕</button>
+    <span class="slide-panel-title" data-i18n="panels.printers">Принтеры</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть" data-i18n-title="common.close">✕</button>
   </div>
   <div class="slide-panel-body">
     <div id="registered-printers-list"></div>
-    <div class="discover-divider">Доступны в системе</div>
+    <div class="discover-divider" data-i18n="panels.availableSystem">Доступны в системе</div>
     <div id="discovered-printers-list"></div>
+    <div class="discover-divider" data-i18n="panels.backendDiagnostics">Диагностика backend</div>
+    <div id="printer-diagnostics-shell" class="diag-shell">
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn btn-sm" type="button" onclick="copyDiagnosticReport()" data-i18n="diagnostics.copyReport">Копировать отчёт</button>
+        <button class="btn btn-sm btn-ghost" type="button" onclick="downloadDiagnosticReport()" data-i18n="diagnostics.downloadReport">Скачать .txt</button>
+      </div>
+      <div id="printer-diagnostics-summary" class="diag-summary" data-i18n="diagnostics.loading">Загрузка диагностики...</div>
+      <div id="printer-diagnostics-checks" class="diag-list"></div>
+      <div id="printer-diagnostics-recommendations" class="diag-rec-list"></div>
+    </div>
   </div>
 </div>
 
 <!-- ── PANEL: NEW JOB ────────────────────────────────────── -->
 <div id="panel-job" class="slide-panel" role="dialog" aria-label="Новое задание">
   <div class="slide-panel-header">
-    <span class="slide-panel-title">Новое задание</span>
-    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть">✕</button>
+    <span class="slide-panel-title" data-i18n="panels.newJob">Новое задание</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть" data-i18n-title="common.close">✕</button>
   </div>
   <div class="slide-panel-body">
     <div class="tabs">
-      <div class="tab active" data-tab="upload" onclick="switchTab('upload')">Файл</div>
-      <div class="tab" data-tab="url" onclick="switchTab('url')">Ссылка</div>
-      <div class="tab" data-tab="base64" onclick="switchTab('base64')">Base64</div>
+      <div class="tab active" data-tab="upload" onclick="switchTab('upload')" data-i18n="tabs.file">Файл</div>
+      <div class="tab" data-tab="url" onclick="switchTab('url')" data-i18n="tabs.url">Ссылка</div>
+      <div class="tab" data-tab="base64" onclick="switchTab('base64')" data-i18n="tabs.base64">Base64</div>
     </div>
 
     <div id="tab-upload" class="tab-panel active">
@@ -1029,47 +1158,47 @@
            ondragleave="this.classList.remove('drag')"
            ondrop="handleDrop(event)">
         <div class="dropzone-icon">📄</div>
-        <div class="dropzone-text">Перетащите PDF или нажмите для выбора</div>
+        <div class="dropzone-text" data-i18n="dropzone.text">Перетащите PDF или нажмите для выбора</div>
         <input type="file" id="file-input" accept=".pdf" onchange="handleFileSelect(event)">
       </div>
       <div id="file-name" class="dropzone-file"></div>
-      <p class="helper-text" id="upload-hint">Поддерживается PDF. Лимит задаётся в настройках.</p>
+      <p class="helper-text" id="upload-hint" data-i18n="upload.hint">Поддерживается PDF. Лимит задаётся в настройках.</p>
     </div>
 
     <div id="tab-url" class="tab-panel">
       <div class="field">
-        <label>Ссылка на PDF</label>
+        <label data-i18n="fields.pdfUrl">Ссылка на PDF</label>
         <input type="url" id="url-input" placeholder="https://example.com/document.pdf">
       </div>
     </div>
 
     <div id="tab-base64" class="tab-panel">
       <div class="field">
-        <label>Base64 содержимое</label>
+        <label data-i18n="fields.base64Data">Base64 содержимое</label>
         <textarea id="base64-input" placeholder="JVBERi0xLjQK..."></textarea>
       </div>
       <div class="field">
-        <label>Имя файла</label>
+        <label data-i18n="fields.fileName">Имя файла</label>
         <input type="text" id="base64-name-input" placeholder="document.pdf">
       </div>
     </div>
 
     <div class="field-row" style="margin-top: 14px;">
       <div class="field">
-        <label>Принтер</label>
+        <label data-i18n="fields.printer">Принтер</label>
         <select id="printer-select">
-          <option value="">По умолчанию</option>
+          <option value="" data-i18n="job.defaultOption">По умолчанию</option>
         </select>
       </div>
       <div class="field">
-        <label>Копий</label>
+        <label data-i18n="fields.copies">Копий</label>
         <input type="number" id="copies-input" value="1" min="1" max="99">
       </div>
     </div>
-    <p class="helper-text" id="job-target-hint" style="margin-bottom:12px;">Если принтер не выбран, задание пойдёт на системный принтер по умолчанию.</p>
+    <p class="helper-text" id="job-target-hint" style="margin-bottom:12px;" data-i18n="job.targetDefault">Если принтер не выбран, задание пойдёт на системный принтер по умолчанию.</p>
 
     <div class="btn-row">
-      <button class="btn btn-primary" id="print-btn" type="button" onclick="createJob()" style="width:100%;">⎙ Отправить на печать</button>
+      <button class="btn btn-primary" id="print-btn" type="button" onclick="createJob()" style="width:100%;" data-i18n="job.submit">⎙ Отправить на печать</button>
     </div>
   </div>
 </div>
@@ -1077,67 +1206,79 @@
 <!-- ── PANEL: SETTINGS ───────────────────────────────────── -->
 <div id="panel-settings" class="slide-panel" role="dialog" aria-label="Настройки">
   <div class="slide-panel-header">
-    <span class="slide-panel-title">Настройки узла</span>
-    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть">✕</button>
+    <span class="slide-panel-title" data-i18n="panels.settings">Настройки узла</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть" data-i18n-title="common.close">✕</button>
   </div>
   <div class="slide-panel-body" id="settings-panel-body">
-    <div class="note-box">
-      API ключ сохраняется локально в браузере для авторизации запросов. Изменение порта применяется после перезапуска сервиса.
+    <div class="note-box" data-i18n="settings.note">
+      API ключ сохраняется локально в браузере. Для внешних интеграций предпочтителен `Authorization: Bearer &lt;key&gt;`. Изменение порта применяется после перезапуска сервиса.
     </div>
 
     <div class="field">
-      <label>API ключ</label>
+      <label data-i18n="settings.apiKey">API ключ</label>
       <input
         type="text"
         id="api-key-input"
         placeholder="printhub-..."
         onchange="applyApiKey()"
         onkeydown="handleApiKeyKeydown(event)">
-      <p class="helper-text">После вставки ключа нажмите Enter или просто перейдите к другому полю.</p>
+      <p class="helper-text" data-i18n="settings.apiKeyHelper">После вставки ключа нажмите Enter или просто перейдите к другому полю.</p>
     </div>
 
     <div class="field-row">
       <div class="field">
-        <label>Имя сервиса</label>
+        <label data-i18n="settings.serviceName">Имя сервиса</label>
         <input type="text" id="service-name-input" placeholder="PrintHub">
       </div>
       <div class="field">
-        <label>Порт</label>
+        <label data-i18n="settings.port">Порт</label>
         <input type="number" id="port-input" min="1" max="65535" placeholder="5051">
       </div>
     </div>
 
     <div class="field-row">
       <div class="field">
-        <label>Заголовок ключа</label>
+        <label data-i18n="settings.legacyHeader">Legacy заголовок</label>
         <input type="text" id="api-key-header-input" placeholder="X-PrintHub-Api-Key">
+        <p class="helper-text" data-i18n="settings.legacyHeaderHelper">Нужен только для совместимости со старыми интеграциями. Новый стандартный вариант: `Authorization: Bearer &lt;key&gt;`.</p>
       </div>
       <div class="field">
-        <label>Макс. файл (байт)</label>
+        <label data-i18n="settings.maxFile">Макс. файл (байт)</label>
         <input type="number" id="max-upload-size-input" min="1" placeholder="10485760">
       </div>
     </div>
 
     <div class="field">
-      <label>Директория хранения</label>
+      <label data-i18n="settings.storageDirectory">Директория хранения</label>
       <input type="text" id="storage-directory-input" placeholder="data/documents">
     </div>
 
     <div class="autostart-block">
       <div class="autostart-row">
         <div>
-          <div class="autostart-title">Автозапуск PrintHub</div>
-          <div id="autostart-provider-text" style="font-size:11px;color:var(--muted);margin-top:2px;">Проверка...</div>
+          <div class="autostart-title" data-i18n="settings.autostart">Автозапуск PrintHub</div>
+          <div id="autostart-provider-text" style="font-size:11px;color:var(--muted);margin-top:2px;" data-i18n="settings.autostartChecking">Проверка...</div>
         </div>
-        <span id="autostart-status-pill" class="status-pill">Проверка</span>
+        <span id="autostart-status-pill" class="status-pill" data-i18n="settings.autostartChecking">Проверка</span>
       </div>
-      <div id="autostart-entry-text" class="autostart-info">Статус автозапуска ещё не загружен.</div>
-      <button class="btn btn-sm" id="autostart-toggle-btn" type="button" onclick="toggleAutoStart()">Загрузка...</button>
+      <div id="autostart-entry-text" class="autostart-info" data-i18n="settings.autostartNotLoaded">Статус автозапуска ещё не загружен.</div>
+      <button class="btn btn-sm" id="autostart-toggle-btn" type="button" onclick="toggleAutoStart()" data-i18n="settings.autostartLoading">Загрузка...</button>
     </div>
 
     <button class="btn btn-primary" type="button" onclick="saveSettings()" style="width:100%;">
-      Сохранить настройки
+      <span data-i18n="settings.save">Сохранить настройки</span>
     </button>
+  </div>
+</div>
+
+<!-- ── PANEL: JOB DETAILS ───────────────────────────────── -->
+<div id="panel-job-details" class="slide-panel" role="dialog" aria-label="Детали задания">
+  <div class="slide-panel-header">
+    <span class="slide-panel-title" id="job-details-title" data-i18n="panels.jobDetails">Детали задания</span>
+    <button class="slide-panel-close" onclick="closePanel()" title="Закрыть" data-i18n-title="common.close">✕</button>
+  </div>
+  <div class="slide-panel-body">
+    <div id="job-details-content" class="panel-empty" data-i18n="jobs.details.selectPrompt">Выберите задание в списке.</div>
   </div>
 </div>
 
@@ -1149,8 +1290,8 @@
         <span class="setup-logo-icon">⎙</span>
         <span class="setup-logo-name">PrintHub</span>
       </div>
-      <div class="setup-heading">Первый запуск</div>
-      <div class="setup-subtext">
+      <div class="setup-heading" data-i18n="setup.firstRun">Первый запуск</div>
+      <div class="setup-subtext" data-i18n="setup.description">
         Настройте API ключ, чтобы PrintHub был готов к приёму заданий.
       </div>
 
@@ -1158,8 +1299,8 @@
         <div id="setup-step-api" class="setup-step">
           <div class="setup-step-num">1</div>
           <div>
-            <div class="setup-step-title" id="setup-step-api-title">Добавить API ключ</div>
-            <div class="setup-step-copy" id="setup-step-api-copy">Ключ для авторизации внешних систем.</div>
+            <div class="setup-step-title" id="setup-step-api-title" data-i18n="setup.addApiKey">Добавить API ключ</div>
+            <div class="setup-step-copy" id="setup-step-api-copy" data-i18n="setup.addApiKeyCopy">Ключ для авторизации внешних систем.</div>
           </div>
         </div>
       </div>
@@ -1172,34 +1313,32 @@
     </div>
 
     <div class="setup-right">
-      <div class="setup-form-title">Быстрая настройка</div>
-      <div class="setup-form-sub" id="setup-summary-copy">Настройте API ключ для старта.</div>
+      <div class="setup-form-title" data-i18n="setup.quickTitle">Быстрая настройка</div>
+      <div class="setup-form-sub" id="setup-summary-copy" data-i18n="setup.quickSub">Настройте API ключ для старта.</div>
 
       <div class="field">
-        <label>API ключ для интеграций</label>
+        <label data-i18n="setup.integrationApiKey">API ключ для интеграций</label>
         <input type="text" id="onboarding-api-key-input" placeholder="printhub-...">
-        <p class="helper-text">Этот ключ используют сайт, ERP или CRM для доступа к PrintHub.</p>
+        <p class="helper-text" data-i18n="setup.integrationApiKeyHelper">Этот ключ используют сайт, ERP или CRM для доступа к PrintHub.</p>
       </div>
 
-      <div class="setup-note" id="onboarding-autostart-note">
+      <div class="setup-note" id="onboarding-autostart-note" data-i18n="setup.autostartNote">
         PrintHub может запускаться автоматически после входа в систему. Это удобно для рабочих станций и офисных компьютеров.
       </div>
 
       <label class="toggle-row" style="margin-bottom:16px;">
         <input type="checkbox" id="onboarding-enable-autostart" checked onchange="markOnboardingAutoStartTouched()">
-        Включить автозапуск после завершения настройки
+        <span data-i18n="setup.enableAutostart">Включить автозапуск после завершения настройки</span>
       </label>
 
       <div class="setup-actions" style="margin-bottom:16px;">
-        <button class="btn btn-sm" type="button" onclick="generateOnboardingApiKey()">⚡ Сгенерировать</button>
-        <button class="btn btn-sm" type="button" onclick="refreshSetupStatus()">⟳ Обновить</button>
+        <button class="btn btn-sm" type="button" onclick="generateOnboardingApiKey()" data-i18n="common.generate">⚡ Сгенерировать</button>
+        <button class="btn btn-sm" type="button" onclick="refreshSetupStatus()" data-i18n="common.refresh">⟳ Обновить</button>
       </div>
 
       <div class="setup-actions">
-        <button class="btn btn-primary" id="setup-complete-btn" type="button" onclick="completeOnboarding()">
-          Завершить настройку →
-        </button>
-        <button class="btn btn-sm" type="button" onclick="openAdvancedSettings()">Расширенные настройки</button>
+        <button class="btn btn-primary" id="setup-complete-btn" type="button" onclick="completeOnboarding()" data-i18n="setup.complete">Завершить настройку →</button>
+        <button class="btn btn-sm" type="button" onclick="openAdvancedSettings()" data-i18n="setup.advanced">Расширенные настройки</button>
       </div>
     </div>
   </div>
@@ -1208,30 +1347,19 @@
 <!-- ── TOAST ───────────────────────────────────────────────── -->
 <div id="toast"></div>
 
+<script src="i18n.js"></script>
 <script>
   const API_KEY_STORAGE_KEY = 'printhub.apiKey';
-
-  const STATUS_LABELS = {
-    pending:    'Ожидание',
-    processing: 'Печать',
-    completed:  'Готово',
-    failed:     'Ошибка',
-    canceled:   'Отменено'
-  };
-
-  const PRINTER_STATUS_LABELS = {
-    ready:   'Готов',
-    busy:    'Занят',
-    offline: 'Отключён',
-    error:   'Ошибка',
-    unknown: 'Неизвестно'
-  };
+  const { t: translate, loadStoredLanguage, persistLanguage: storeLanguage, applyTranslationsToDom } = window.PrintHubI18n;
 
   let apiKey          = loadStoredApiKey();
+  let currentLanguage = loadStoredLanguage();
   let currentSettings = null;
   let setupStatus     = null;
   let autoStartStatus = null;
   let queueStatus     = null;
+  let printerDiagnostics = null;
+  let currentJobDetailsId = null;
   let printersCache   = [];
   let jobsCache       = [];
   let activeTab       = 'upload';
@@ -1269,6 +1397,47 @@
     if (e.key === 'Escape' && _openPanel) { closePanel(); }
   });
 
+  function t(key, params = {}) {
+    return translate(key, params, currentLanguage);
+  }
+
+  function changeLanguage(language) {
+    currentLanguage = language;
+    storeLanguage(currentLanguage);
+    applyTranslations();
+  }
+
+  function applyTranslations() {
+    applyTranslationsToDom(currentLanguage);
+    const languageSelect = document.getElementById('language-select');
+    if (languageSelect) {
+      languageSelect.value = currentLanguage;
+    }
+
+    updateSettingsSummary(currentSettings || fallbackSettings());
+    updateAutoStartSummary(autoStartStatus);
+    updateQueueSummary(queueStatus);
+    updatePrintersSummary(printersCache);
+    updateJobsSummary(jobsCache);
+    updatePrintersButton(printersCache.length);
+
+    if (setupStatus) {
+      applySetupStatus(setupStatus);
+    }
+
+    if (_openPanel === 'printers') {
+      loadPanelPrinters();
+    } else if (_openPanel === 'job') {
+      renderPrinterSelect(printersCache, document.getElementById('printer-select')?.value || '');
+    } else if (_openPanel === 'job-details' && currentJobDetailsId) {
+      openJobDetails(currentJobDetailsId);
+    }
+
+    if (jobsCache.length || document.querySelector('#jobs-container table')) {
+      loadJobs();
+    }
+  }
+
   function refreshAll() { loadJobs(); loadQueueStatus(); }
 
   function loadSettingsIntoPanel() {
@@ -1281,59 +1450,69 @@
   async function loadPanelPrinters() {
     const regList = document.getElementById('registered-printers-list');
     const discList = document.getElementById('discovered-printers-list');
-    regList.innerHTML = '<div class="panel-empty">Загрузка...</div>';
+    const diagSummary = document.getElementById('printer-diagnostics-summary');
+    const diagChecks = document.getElementById('printer-diagnostics-checks');
+    const diagRecommendations = document.getElementById('printer-diagnostics-recommendations');
+    regList.innerHTML = `<div class="panel-empty">${esc(t('common.loading'))}</div>`;
     discList.innerHTML = '';
+    if (diagSummary) diagSummary.textContent = t('diagnostics.loading');
+    if (diagChecks) diagChecks.innerHTML = '';
+    if (diagRecommendations) diagRecommendations.innerHTML = '';
 
     const key = resolveRequestApiKey();
     const headers = authHeaders(key);
 
     try {
-      const [regRes, discRes] = await Promise.all([
+      const [regRes, discRes, diagRes] = await Promise.all([
         fetch('/printers', { headers }),
-        fetch('/printers/discover', { headers })
+        fetch('/printers/discover', { headers }),
+        fetch('/printers/diagnostics', { headers })
       ]);
 
       if (!regRes.ok) {
-        regList.innerHTML = `<div class="panel-empty">Ошибка ${regRes.status} — проверьте API ключ</div>`;
+        regList.innerHTML = `<div class="panel-empty">${esc(t('printers.authError', { status: regRes.status }))}</div>`;
         discList.innerHTML = '';
+        renderPrinterDiagnostics(null, regRes.status);
         return;
       }
       const registered = await regRes.json();
       const discovered = discRes.ok ? await discRes.json() : [];
+      printerDiagnostics = diagRes.ok ? await diagRes.json() : null;
+      renderPrinterDiagnostics(printerDiagnostics, diagRes.status);
 
-      const btn = document.getElementById('printers-btn');
-      if (btn) btn.textContent = '🖨 ' + (registered.length > 0 ? registered.length + ' принт.' : '—');
+      updatePrintersButton(registered.length);
 
       if (registered.length === 0) {
-        regList.innerHTML = '<div class="panel-empty">Принтеры не добавлены</div>';
+        regList.innerHTML = `<div class="panel-empty">${esc(t('printers.noneRegistered'))}</div>`;
       } else {
         regList.innerHTML = registered.map(p => {
           const st = normalizeStatus(p.status);
-          const stLabel = PRINTER_STATUS_LABELS[st] || st;
+          const stLabel = printerStatusLabel(st);
           return `
           <div class="printer-panel-row">
             <span class="printer-name-wrap"><span class="printer-name">${esc(p.name)}</span></span>
             <span class="status-pill ${st}">${stLabel}</span>
-            <button class="btn-icon" title="Удалить" onclick="removePanelPrinter('${escAttr(p.id)}')">✕</button>
+            <button class="btn-icon" title="${escAttr(t('jobs.actions.delete'))}" onclick="removePanelPrinter('${escAttr(p.id)}')">✕</button>
           </div>`;
         }).join('');
         setupMarquee(regList);
       }
 
       if (discovered.length === 0) {
-        discList.innerHTML = '<div class="panel-empty">Все принтеры уже добавлены</div>';
+        discList.innerHTML = `<div class="panel-empty">${esc(t('printers.allAdded'))}</div>`;
       } else {
         discList.innerHTML = discovered.map(p => `
           <div class="printer-panel-row">
             <span class="status-dot ${normalizeStatus(p.status)}"></span>
             <span class="printer-name-wrap"><span class="printer-name">${esc(p.name)}</span></span>
-            <button class="btn btn-sm" onclick="addPanelPrinter('${escAttr(p.id)}')">+ Подключить</button>
+            <button class="btn btn-sm" onclick="addPanelPrinter('${escAttr(p.id)}')">+ ${esc(t('printers.connect'))}</button>
           </div>
         `).join('');
         setupMarquee(discList);
       }
     } catch (e) {
-      regList.innerHTML = '<div class="panel-empty">Ошибка загрузки</div>';
+      regList.innerHTML = `<div class="panel-empty">${esc(t('printers.loadError'))}</div>`;
+      renderPrinterDiagnostics(null, 0);
     }
   }
 
@@ -1344,8 +1523,8 @@
       headers: { ...authHeaders(key), 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
     });
-    if (res.ok) { showToast('Принтер добавлен'); loadPanelPrinters(); }
-    else showToast('Ошибка добавления', true);
+    if (res.ok) { showToast(t('printers.added')); loadPanelPrinters(); }
+    else showToast(t('printers.addFailed'), true);
   }
 
   async function removePanelPrinter(id) {
@@ -1354,8 +1533,8 @@
       method: 'DELETE',
       headers: authHeaders(key)
     });
-    if (res.ok) { showToast('Принтер удалён'); loadPanelPrinters(); }
-    else showToast('Ошибка удаления', true);
+    if (res.ok) { showToast(t('printers.removed')); loadPanelPrinters(); }
+    else showToast(t('printers.removeFailed'), true);
   }
 
   function setupMarquee(container) {
@@ -1373,9 +1552,113 @@
     });
   }
 
+  function renderPrinterDiagnostics(diagnostics, statusCode = 200) {
+    const summaryEl = document.getElementById('printer-diagnostics-summary');
+    const checksEl = document.getElementById('printer-diagnostics-checks');
+    const recommendationsEl = document.getElementById('printer-diagnostics-recommendations');
+
+    if (!summaryEl || !checksEl || !recommendationsEl) {
+      return;
+    }
+
+    if (!diagnostics) {
+      summaryEl.textContent = statusCode === 401
+        ? t('diagnostics.unavailableAuth')
+        : t('diagnostics.unavailable');
+      checksEl.innerHTML = '';
+      recommendationsEl.innerHTML = statusCode === 401
+        ? ''
+        : `<div class="diag-rec">${esc(t('diagnostics.retryTip'))}</div>`;
+      return;
+    }
+
+    const backend = esc(String(diagnostics.backend || 'unknown'));
+    const printersCount = Array.isArray(diagnostics.printers) ? diagnostics.printers.length : 0;
+    summaryEl.innerHTML = `
+      <div><strong>${esc(t('diagnostics.backendLabel'))}:</strong> ${backend}</div>
+      <div style="margin-top:4px;">${esc(diagnostics.summary || t('diagnostics.summaryFallback'))}</div>
+      <div style="margin-top:4px;color:var(--muted);">${esc(t('diagnostics.printersDetected', { count: printersCount }))}</div>
+    `;
+
+    const checks = Array.isArray(diagnostics.checks) ? diagnostics.checks : [];
+    checksEl.innerHTML = checks.length
+      ? checks.map(check => {
+          const severity = normalizeDiagnosticSeverity(check.severity);
+          const pillClass = severity === 'error' ? 'error' : severity === 'warning' ? 'busy' : 'ready';
+          return `
+            <div class="diag-item ${severity}">
+              <div class="diag-item-head">
+                <div class="diag-item-title">${esc(check.title || check.code || 'Check')}</div>
+                <span class="status-pill ${pillClass}">${esc(diagnosticSeverityLabel(severity))}</span>
+              </div>
+              <div class="diag-item-copy">${esc(check.message || '')}</div>
+              ${check.value ? `<div class="diag-item-value">${esc(check.value)}</div>` : ''}
+            </div>
+          `;
+        }).join('')
+      : `<div class="panel-empty">${esc(t('diagnostics.noChecks'))}</div>`;
+
+    const recommendations = Array.isArray(diagnostics.recommendations) ? diagnostics.recommendations : [];
+    recommendationsEl.innerHTML = recommendations.length
+      ? recommendations.map(item => `<div class="diag-rec">• ${esc(item)}</div>`).join('')
+      : `<div class="diag-rec">${esc(t('diagnostics.noActions'))}</div>`;
+  }
+
+  async function fetchDiagnosticReport() {
+    const response = await fetch('/diagnostics/report', {
+      headers: authHeaders(resolveRequestApiKey())
+    });
+
+    if (!response.ok) {
+      throw new Error(t('diagnostics.fetchFailed', { status: response.status }));
+    }
+
+    return await response.text();
+  }
+
+  async function copyDiagnosticReport() {
+    try {
+      const report = await fetchDiagnosticReport();
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(report);
+        showToast(t('diagnostics.copied'));
+        return;
+      }
+
+      await downloadDiagnosticReport(report);
+      showToast(t('diagnostics.clipboardFallback'));
+    } catch (error) {
+      showToast(t('common.error', { message: error.message }), true);
+    }
+  }
+
+  async function downloadDiagnosticReport(preloadedReport = null) {
+    try {
+      const report = preloadedReport || await fetchDiagnosticReport();
+      const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.href = url;
+      link.download = `printhub-diagnostics-${stamp}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      if (!preloadedReport) {
+        showToast(t('diagnostics.downloaded'));
+      }
+    } catch (error) {
+      showToast(t('common.error', { message: error.message }), true);
+    }
+  }
+
   // ── INIT ─────────────────────────────────────────────────
   async function init() {
     document.getElementById('api-key-input').value = apiKey;
+    applyTranslations();
     await checkHealth();
     await loadSettings();
     await loadAutoStartStatus();
@@ -1396,7 +1679,7 @@
       label.textContent = payload.service || 'PrintHub';
     } catch {
       dot.className   = 'status-dot err';
-      label.textContent = 'Недоступен';
+      label.textContent = t('health.unavailable');
     }
   }
 
@@ -1526,7 +1809,7 @@
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось сохранить настройки', true);
+        showToast(detail.detail || t('settings.saveFailed'), true);
         return;
       }
       currentSettings = await response.json();
@@ -1537,12 +1820,12 @@
       await loadAutoStartStatus();
       showBanner(!apiKey);
       await loadSetupStatus();
-      showToast('Настройки сохранены');
+      showToast(t('settings.saved'));
       await checkHealth();
       await loadPrinters();
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -1558,15 +1841,15 @@
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось изменить автозапуск', true);
+        showToast(detail.detail || t('autostart.updateFailed'), true);
         return;
       }
       autoStartStatus = await response.json();
       updateAutoStartSummary(autoStartStatus);
       syncOnboardingAutoStartState(autoStartStatus);
-      showToast(nextEnabled ? 'Автозапуск включён' : 'Автозапуск отключён');
+      showToast(nextEnabled ? t('autostart.enabled') : t('autostart.disabled'));
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     } finally {
       button.disabled = false;
     }
@@ -1610,8 +1893,7 @@
       updatePrintersSummary(printersCache);
       syncSetupPrinters(printersCache);
 
-      const btn = document.getElementById('printers-btn');
-      if (btn) btn.textContent = '🖨 ' + (printersCache.length > 0 ? printersCache.length + ' принт.' : '—');
+      updatePrintersButton(printersCache.length);
     } catch {
       const fallback = Array.isArray(setupStatus?.printers) ? setupStatus.printers : [];
       if (fallback.length > 0) {
@@ -1636,18 +1918,18 @@
           <div class="printer-name-text">${esc(printer.name)}</div>
           <div class="printer-id-text">${esc(printer.id)}</div>
         </div>
-        ${printer.isDefault ? '<span class="badge-default">default</span>' : ''}
+        ${printer.isDefault ? `<span class="badge-default">${esc(t('printers.defaultBadge'))}</span>` : ''}
         <div class="printer-acts">
           <button class="btn btn-sm btn-ghost"
             type="button"
             ${printer.isDefault ? 'disabled' : ''}
             onclick="setDefaultPrinter('${escAttr(printer.id)}')"
-            title="${printer.isDefault ? 'Уже основной' : 'Сделать основным'}"
+            title="${escAttr(printer.isDefault ? t('printers.alreadyDefault') : t('printers.makeDefault'))}"
           >${printer.isDefault ? '★' : '☆'}</button>
           <button class="btn btn-sm btn-ghost"
             type="button"
             onclick="testPrinter('${escAttr(printer.id)}')"
-            title="Тестовая печать"
+            title="${escAttr(t('printers.testPrint'))}"
           >⎙</button>
         </div>
       </div>
@@ -1662,17 +1944,17 @@
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось сохранить принтер по умолчанию', true);
+        showToast(detail.detail || t('printers.defaultSetFailed'), true);
         return;
       }
       const printer = await response.json();
       currentSettings = { ...(currentSettings || fallbackSettings()), defaultPrinterName: printer.name };
       updateSettingsSummary(currentSettings);
       await loadSetupStatus();
-      showToast(`Принтер по умолчанию: ${printer.name}`);
+      showToast(t('printers.defaultSet', { name: printer.name }));
       await loadPrinters();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -1684,14 +1966,14 @@
       });
       if (!response.ok && response.status !== 201) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось отправить тестовую печать', true);
+        showToast(detail.detail || t('printers.testPrintFailed'), true);
         return;
       }
       const payload = await response.json();
-      showToast(`Тест отправлен: ${payload.jobId.slice(0, 8)}…`);
+      showToast(t('printers.testPrintSent', { jobId: `${payload.jobId.slice(0, 8)}…` }));
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -1702,7 +1984,7 @@
     const shouldEnableAutoStart = Boolean(document.getElementById('onboarding-enable-autostart')?.checked);
 
     if (!onboardingApiKey) {
-      showToast('Сначала задайте API ключ', true);
+      showToast(t('setup.enterApiKey'), true);
       apiKeyInput.focus();
       return;
     }
@@ -1716,7 +1998,7 @@
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось завершить настройку', true);
+        showToast(detail.detail || t('setup.completeFailed'), true);
         return;
       }
       setupStatus = await response.json();
@@ -1734,7 +2016,7 @@
       await loadJobs();
       showToast(resolveOnboardingCompletionMessage(autoStartResult));
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     } finally {
       button.disabled = false;
     }
@@ -1782,14 +2064,14 @@
 
     document.getElementById('setup-chip-service').textContent = settings.serviceName || 'PrintHub';
     document.getElementById('setup-chip-port').textContent    = `:${settings.port || 5051}`;
-    document.getElementById('setup-chip-printers').textContent = `${printers.length} принт.`;
+    document.getElementById('setup-chip-printers').textContent = t('printers.countShort', { count: printers.length });
 
     setSetupStep('setup-step-api', next.hasApiKey,
       'setup-step-api-title', 'setup-step-api-copy',
-      'API ключ настроен',
-      'Защищённые endpoint-ы принимают запросы с сохранённым ключом.',
-      'Добавить API ключ',
-      'Ключ, который будут использовать сайт, ERP или CRM для печати.');
+      t('setup.addApiKeyReady'),
+      t('setup.addApiKeyCopyReady'),
+      t('setup.addApiKey'),
+      t('setup.addApiKeyCopy'));
 
     document.getElementById('setup-summary-copy').textContent = resolveSetupSummary(next, printers);
 
@@ -1809,15 +2091,15 @@
   }
 
   function resolveSetupSummary(status, printers) {
-    if (!status.hasApiKey) return 'Сохраните API ключ — после этого PrintHub начнёт принимать защищённые запросы.';
+    if (!status.hasApiKey) return t('setup.summary.needApiKey');
     if (autoStartStatus?.isSupported && !autoStartStatus.isEnabled) {
-      return 'API ключ сохранён. При желании включите автозапуск ниже, чтобы PrintHub был готов сразу после входа в систему.';
+      return t('setup.summary.autostartSuggestion');
     }
     if (autoStartStatus?.isEnabled) {
-      return 'Всё готово. PrintHub будет запускаться автоматически после входа в систему.';
+      return t('setup.summary.readyAutostart');
     }
-    if (printers.length === 0) return 'API ключ сохранён. Принтеры можно добавить через панель принтеров.';
-    return 'Всё готово. Закройте мастер и переходите к тестовой печати.';
+    if (printers.length === 0) return t('setup.summary.noPrinters');
+    return t('setup.summary.ready');
   }
 
   function syncOnboardingApiKeyInput(preferredValue = '') {
@@ -1859,14 +2141,14 @@
       if (!checkbox.dataset.userTouched) {
         checkbox.checked = false;
       }
-      note.textContent = 'Статус автозапуска будет доступен после загрузки настроек PrintHub.';
+      note.textContent = t('setup.statusUnavailable');
       return;
     }
 
     if (!status.isSupported) {
       checkbox.disabled = true;
       checkbox.checked = false;
-      note.textContent = 'Автозапуск недоступен в текущем режиме. Для фонового старта используйте установленную self-contained версию PrintHub.';
+      note.textContent = t('setup.autostartUnsupported');
       return;
     }
 
@@ -1877,11 +2159,11 @@
 
     if (status.isEnabled) {
       checkbox.checked = true;
-      note.textContent = `Автозапуск уже включён через ${autoStartProviderLabel(status.provider)}. PrintHub будет стартовать автоматически после входа в систему.`;
+      note.textContent = t('setup.autostartAlreadyEnabled', { provider: autoStartProviderLabel(status.provider) });
       return;
     }
 
-    note.textContent = `Рекомендуется включить автозапуск через ${autoStartProviderLabel(status.provider)}, чтобы PrintHub был готов без ручного запуска.`;
+    note.textContent = t('setup.autostartRecommend', { provider: autoStartProviderLabel(status.provider) });
   }
 
   async function enableAutoStartFromOnboarding() {
@@ -1917,26 +2199,26 @@
 
   function resolveOnboardingCompletionMessage(autoStartResult) {
     if (autoStartResult === 'enabled') {
-      return 'PrintHub готов к работе. Автозапуск включён.';
+      return t('setup.completeEnabled');
     }
 
     if (autoStartResult === 'already-enabled') {
-      return 'PrintHub готов к работе. Автозапуск уже был включён.';
+      return t('setup.completeAlreadyEnabled');
     }
 
     if (autoStartResult === 'unsupported') {
-      return 'PrintHub готов к работе. Автозапуск недоступен в текущем режиме.';
+      return t('setup.completeUnsupported');
     }
 
     if (typeof autoStartResult === 'string' && autoStartResult.startsWith('failed:')) {
-      return `PrintHub готов к работе, но автозапуск включить не удалось: ${autoStartResult.slice('failed:'.length)}`;
+      return t('setup.completeFailedDetail', { detail: autoStartResult.slice('failed:'.length) });
     }
 
     if (autoStartResult === 'failed') {
-      return 'PrintHub готов к работе, но автозапуск включить не удалось.';
+      return t('setup.completeFailed');
     }
 
-    return 'PrintHub готов к работе';
+    return t('setup.completeDone');
   }
 
   async function loadJobs() {
@@ -1952,27 +2234,27 @@
         queueStatus = null;
         updateQueueSummary(null);
         updateJobsSummary([]);
-        container.innerHTML = '<div class="empty-state">Нет доступа к заданиям. Проверьте API ключ.</div>';
+        container.innerHTML = `<div class="empty-state">${esc(t('jobs.noAccess'))}</div>`;
         return;
       }
       jobsCache = await response.json();
       await loadQueueStatus();
       updateJobsSummary(jobsCache);
       if (!jobsCache.length) {
-        container.innerHTML = '<div class="empty-state">Заданий пока нет.</div>';
+        container.innerHTML = `<div class="empty-state">${esc(t('jobs.empty'))}</div>`;
         return;
       }
       container.innerHTML = `
         <table>
           <thead>
             <tr>
-              <th>Задание</th>
-              <th>Принтер</th>
-              <th>Статус</th>
-              <th>Коп.</th>
-              <th>Создано</th>
-              <th>Завершено</th>
-              <th>Действия</th>
+              <th>${esc(t('jobs.table.job'))}</th>
+              <th>${esc(t('jobs.table.printer'))}</th>
+              <th>${esc(t('jobs.table.status'))}</th>
+              <th>${esc(t('jobs.table.copies'))}</th>
+              <th>${esc(t('jobs.table.created'))}</th>
+              <th>${esc(t('jobs.table.completed'))}</th>
+              <th>${esc(t('jobs.table.actions'))}</th>
             </tr>
           </thead>
           <tbody>
@@ -1982,7 +2264,7 @@
                   <div class="job-id-short">${esc(job.jobId.slice(0, 8))}…</div>
                   <div class="job-id-full">${esc(job.jobId)}</div>
                 </td>
-                <td>${esc(job.printerName || 'Системный')}</td>
+                <td>${esc(job.printerName || t('common.systemDefaultPrinter'))}</td>
                 <td>
                   <span class="job-badge ${normalizeStatus(job.status)}">${statusLabel(job.status)}</span>
                   ${job.errorMessage ? `<div class="job-error">${esc(job.errorMessage)}</div>` : ''}
@@ -1992,9 +2274,10 @@
                 <td class="job-ts">${job.completedAt ? fmtTime(job.completedAt) : '—'}</td>
                 <td>
                   <div class="job-actions">
-                    ${canCancelJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="cancelJob('${escAttr(job.jobId)}')">Отменить</button>` : ''}
-                    ${canRetryJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="retryJob('${escAttr(job.jobId)}')">Повторить</button>` : ''}
-                    ${canDeleteJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="deleteJob('${escAttr(job.jobId)}')">Удалить</button>` : ''}
+                    <button class="btn btn-sm btn-ghost" type="button" onclick="openJobDetails('${escAttr(job.jobId)}')">${esc(t('jobs.actions.details'))}</button>
+                    ${canCancelJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="cancelJob('${escAttr(job.jobId)}')">${esc(t('jobs.actions.cancel'))}</button>` : ''}
+                    ${canRetryJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="retryJob('${escAttr(job.jobId)}')">${esc(t('jobs.actions.retry'))}</button>` : ''}
+                    ${canDeleteJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="deleteJob('${escAttr(job.jobId)}')">${esc(t('jobs.actions.delete'))}</button>` : ''}
                   </div>
                 </td>
               </tr>
@@ -2007,14 +2290,14 @@
       queueStatus = null;
       updateQueueSummary(null);
       updateJobsSummary([]);
-      container.innerHTML = '<div class="empty-state">Не удалось загрузить очередь заданий.</div>';
+      container.innerHTML = `<div class="empty-state">${esc(t('jobs.loadFailed'))}</div>`;
     }
   }
 
   function startAutoRefresh() {
     clearInterval(refreshTimer);
     if (!document.getElementById('auto-refresh-toggle').checked) {
-      document.getElementById('jobs-meta').textContent = 'Автообновление отключено.';
+      document.getElementById('jobs-meta').textContent = t('jobs.autoRefreshOff');
       return;
     }
     refreshTimer = setInterval(loadJobs, 5000);
@@ -2029,14 +2312,14 @@
 
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось отменить задание', true);
+        showToast(detail.detail || t('jobs.cancelFailed'), true);
         return;
       }
 
-      showToast(`Задание ${jobId.slice(0, 8)}… отменено`);
+      showToast(t('jobs.canceledToast', { jobId: `${jobId.slice(0, 8)}…` }));
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -2049,20 +2332,20 @@
 
       if (!response.ok && response.status !== 201) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось повторить задание', true);
+        showToast(detail.detail || t('jobs.retryFailed'), true);
         return;
       }
 
       const payload = await response.json();
-      showToast(`Создано новое задание: ${payload.jobId.slice(0, 8)}…`);
+      showToast(t('jobs.retryCreated', { jobId: `${payload.jobId.slice(0, 8)}…` }));
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
   async function deleteJob(jobId) {
-    if (!confirm(`Удалить задание ${jobId.slice(0, 8)}… из истории?`)) {
+    if (!confirm(t('jobs.confirmDelete', { jobId: jobId.slice(0, 8) }))) {
       return;
     }
 
@@ -2074,14 +2357,21 @@
 
       if (!response.ok && response.status !== 204) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось удалить задание', true);
+        showToast(detail.detail || t('jobs.deleteFailed'), true);
         return;
       }
 
-      showToast(`Задание ${jobId.slice(0, 8)}… удалено`);
+      showToast(t('jobs.deletedToast', { jobId: `${jobId.slice(0, 8)}…` }));
+      if (currentJobDetailsId === jobId) {
+        const detailsTitle = document.getElementById('job-details-title');
+        const detailsContent = document.getElementById('job-details-content');
+        if (detailsTitle) detailsTitle.textContent = t('panels.jobDetails');
+        if (detailsContent) detailsContent.innerHTML = `<div class="panel-empty">${esc(t('jobs.historyDeleted'))}</div>`;
+        currentJobDetailsId = null;
+      }
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -2089,11 +2379,11 @@
     const finishedCount = jobsCache.filter(canDeleteJob).length;
 
     if (!finishedCount) {
-      showToast('В истории нет завершённых заданий для очистки');
+      showToast(t('jobs.noFinishedForCleanup'));
       return;
     }
 
-    if (!confirm(`Удалить ${finishedCount} завершённых заданий из истории?`)) {
+    if (!confirm(t('jobs.confirmCleanup', { count: finishedCount }))) {
       return;
     }
 
@@ -2105,16 +2395,16 @@
 
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось очистить историю', true);
+        showToast(detail.detail || t('jobs.cleanupFailed'), true);
         return;
       }
 
       const payload = await response.json();
-      showToast(`Удалено заданий: ${payload.deletedCount ?? 0}`);
+      showToast(t('jobs.cleanupDeleted', { count: payload.deletedCount ?? 0 }));
       await loadQueueStatus();
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -2131,16 +2421,16 @@
 
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось обновить состояние очереди', true);
+        showToast(detail.detail || t('queue.updateFailed'), true);
         return;
       }
 
       queueStatus = await response.json();
       updateQueueSummary(queueStatus);
-      showToast(queueStatus.isPaused ? 'Очередь поставлена на паузу' : 'Очередь возобновлена');
+      showToast(queueStatus.isPaused ? t('queue.pausedToast') : t('queue.resumedToast'));
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
   }
 
@@ -2148,11 +2438,11 @@
     const pendingJobs = jobsCache.filter(job => normalizeStatus(job.status) === 'pending').length;
 
     if (!pendingJobs) {
-      showToast('В очереди нет ожидающих заданий');
+      showToast(t('queue.noPending'));
       return;
     }
 
-    if (!confirm(`Отменить ${pendingJobs} ожидающих заданий в очереди?`)) {
+    if (!confirm(t('queue.confirmClear', { count: pendingJobs }))) {
       return;
     }
 
@@ -2164,17 +2454,125 @@
 
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
-        showToast(detail.detail || 'Не удалось очистить очередь', true);
+        showToast(detail.detail || t('queue.clearFailed'), true);
         return;
       }
 
       const payload = await response.json();
-      showToast(`Отменено заданий: ${payload.canceledCount ?? 0}`);
+      showToast(t('queue.canceledCount', { count: payload.canceledCount ?? 0 }));
       await loadQueueStatus();
       await loadJobs();
     } catch (error) {
-      showToast(`Ошибка: ${error.message}`, true);
+      showToast(t('common.error', { message: error.message }), true);
     }
+  }
+
+  async function openJobDetails(jobId) {
+    currentJobDetailsId = jobId;
+    openPanel('job-details');
+
+    const title = document.getElementById('job-details-title');
+    const content = document.getElementById('job-details-content');
+    if (title) title.textContent = t('jobs.titleWithId', { jobId: jobId.slice(0, 8) });
+    if (content) content.innerHTML = `<div class="panel-empty">${esc(t('jobs.details.loading'))}</div>`;
+
+    try {
+      const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}/details`, {
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok) {
+        if (content) {
+          content.innerHTML = response.status === 404
+            ? `<div class="panel-empty">${esc(t('jobs.details.notFound'))}</div>`
+            : `<div class="panel-empty">${esc(t('jobs.details.loadFailed'))}</div>`;
+        }
+        return;
+      }
+
+      const job = await response.json();
+      renderJobDetails(job);
+    } catch {
+      if (content) {
+        content.innerHTML = `<div class="panel-empty">${esc(t('jobs.details.loadFailed'))}</div>`;
+      }
+    }
+  }
+
+  function renderJobDetails(job) {
+    const title = document.getElementById('job-details-title');
+    const content = document.getElementById('job-details-content');
+    if (!content) return;
+
+    if (title) {
+      title.textContent = t('jobs.titleWithId', { jobId: job.jobId.slice(0, 8) });
+    }
+
+    const retryLinks = Array.isArray(job.retryJobIds) && job.retryJobIds.length
+      ? job.retryJobIds.map(id =>
+          `<button class="btn btn-sm btn-ghost" type="button" onclick="openJobDetails('${escAttr(id)}')">${esc(id.slice(0, 8))}…</button>`)
+          .join('')
+      : `<span class="details-value">${esc(t('common.none'))}</span>`;
+
+    const parentLink = job.parentJobId
+      ? `<button class="btn btn-sm btn-ghost" type="button" onclick="openJobDetails('${escAttr(job.parentJobId)}')">${esc(job.parentJobId.slice(0, 8))}…</button>`
+      : `<span class="details-value">${esc(t('common.none'))}</span>`;
+
+    content.innerHTML = `
+      <div class="details-stack">
+        <div class="details-card">
+          <div class="details-card-title">${esc(t('jobs.details.summary'))}</div>
+          <div class="details-grid">
+            <div class="details-label">${esc(t('jobs.details.jobId'))}</div>
+            <div class="details-value details-code">${esc(job.jobId)}</div>
+            <div class="details-label">${esc(t('jobs.details.status'))}</div>
+            <div class="details-value"><span class="job-badge ${normalizeStatus(job.status)}">${statusLabel(job.status)}</span></div>
+            <div class="details-label">${esc(t('jobs.details.printer'))}</div>
+            <div class="details-value">${esc(job.printerName || t('common.systemDefaultPrinter'))}</div>
+            <div class="details-label">${esc(t('jobs.details.copies'))}</div>
+            <div class="details-value">${job.copies}</div>
+            <div class="details-label">${esc(t('jobs.details.created'))}</div>
+            <div class="details-value">${fmtTime(job.createdAt)}</div>
+            <div class="details-label">${esc(t('jobs.details.started'))}</div>
+            <div class="details-value">${fmtTime(job.startedAt)}</div>
+            <div class="details-label">${esc(t('jobs.details.finished'))}</div>
+            <div class="details-value">${fmtTime(job.completedAt)}</div>
+            <div class="details-label">${esc(t('jobs.details.error'))}</div>
+            <div class="details-value">${job.errorMessage ? esc(job.errorMessage) : '—'}</div>
+          </div>
+        </div>
+
+        <div class="details-card">
+          <div class="details-card-title">${esc(t('jobs.details.document'))}</div>
+          <div class="details-grid">
+            <div class="details-label">${esc(t('jobs.details.source'))}</div>
+            <div class="details-value">${documentSourceLabel(job.document.sourceType)}</div>
+            <div class="details-label">${esc(t('jobs.details.format'))}</div>
+            <div class="details-value">${esc(String(job.document.format || '').toUpperCase())}</div>
+            <div class="details-label">${esc(t('jobs.details.fileName'))}</div>
+            <div class="details-value">${esc(job.document.fileName)}</div>
+            <div class="details-label">${esc(t('jobs.details.size'))}</div>
+            <div class="details-value">${formatBytes(job.document.sizeBytes)}</div>
+            <div class="details-label">${esc(t('jobs.details.fileExists'))}</div>
+            <div class="details-value">${job.document.exists ? t('common.exists') : t('common.missing')}</div>
+            <div class="details-label">${esc(t('jobs.details.storedPath'))}</div>
+            <div class="details-value details-code">${esc(job.document.storedPath)}</div>
+            <div class="details-label">${esc(t('jobs.details.sourceUrl'))}</div>
+            <div class="details-value">${job.document.sourceUrl ? esc(job.document.sourceUrl) : '—'}</div>
+          </div>
+        </div>
+
+        <div class="details-card">
+          <div class="details-card-title">${esc(t('jobs.details.lineage'))}</div>
+          <div class="details-grid">
+            <div class="details-label">${esc(t('jobs.details.retryFrom'))}</div>
+            <div class="details-actions-inline">${parentLink}</div>
+            <div class="details-label">${esc(t('jobs.details.retries'))}</div>
+            <div class="details-actions-inline">${retryLinks}</div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   async function createJob() {
@@ -2182,9 +2580,9 @@
     const printer = document.getElementById('printer-select').value || null;
     const copies  = parseInt(document.getElementById('copies-input').value, 10) || 1;
 
-    if (activeTab === 'upload' && !selectedFile) { showToast('Выберите PDF файл', true); return; }
-    if (activeTab === 'url' && !document.getElementById('url-input').value.trim()) { showToast('Введите ссылку на PDF', true); return; }
-    if (activeTab === 'base64' && !document.getElementById('base64-input').value.trim()) { showToast('Введите Base64 содержимое', true); return; }
+    if (activeTab === 'upload' && !selectedFile) { showToast(t('validation.selectPdf'), true); return; }
+    if (activeTab === 'url' && !document.getElementById('url-input').value.trim()) { showToast(t('validation.enterPdfUrl'), true); return; }
+    if (activeTab === 'base64' && !document.getElementById('base64-input').value.trim()) { showToast(t('validation.enterBase64'), true); return; }
 
     button.disabled = true;
     try {
@@ -2234,10 +2632,10 @@
   async function handleJobResponse(response) {
     if (!response.ok && response.status !== 201) {
       const detail = await response.json().catch(() => ({}));
-      showToast(detail.detail || `Ошибка ${response.status}`, true);
+      showToast(detail.detail || t('common.error', { message: response.status }), true);
       return;
     }
-    showToast('Задание создано');
+    showToast(t('jobs.created'));
     resetJobForm();
     closePanel();
     await loadJobs();
@@ -2327,7 +2725,7 @@
     if (storageChip) storageChip.textContent = next.storageDirectory || 'data/documents';
     const uploadHint = document.getElementById('upload-hint');
     if (uploadHint) uploadHint.textContent =
-      `Поддерживается PDF. Текущий лимит: ${formatBytes(next.maxUploadSizeBytes || 10485760)}.`;
+      t('upload.limitHint', { size: formatBytes(next.maxUploadSizeBytes || 10485760) });
   }
 
   function updateAutoStartSummary(status) {
@@ -2340,40 +2738,46 @@
 
     if (!status) {
       pill.className = 'status-pill unsupported';
-      pill.textContent = 'Недоступно';
-      if (provider) provider.textContent = 'Статус автозапуска недоступен.';
-      if (entry) entry.textContent = 'Проверьте API ключ или сохраните настройки.';
-      if (button) { button.disabled = true; button.textContent = 'Недоступно'; }
+      pill.textContent = t('autostart.unavailable');
+      if (provider) provider.textContent = t('autostart.statusUnavailable');
+      if (entry) entry.textContent = t('autostart.checkApiKey');
+      if (button) { button.disabled = true; button.textContent = t('autostart.unavailable'); }
       return;
     }
     if (!status.isSupported) {
       pill.className = 'status-pill unsupported';
-      pill.textContent = 'Не поддерживается';
-      if (provider) provider.textContent = `Провайдер: ${autoStartProviderLabel(status.provider)}.`;
-      if (entry) entry.textContent = 'Используйте self-contained publish для поддержки автозапуска.';
-      if (button) { button.disabled = true; button.textContent = 'Недоступно'; }
+      pill.textContent = t('autostart.notSupported');
+      if (provider) provider.textContent = t('autostart.providerValue', { provider: autoStartProviderLabel(status.provider) });
+      if (entry) entry.textContent = t('autostart.usePublish');
+      if (button) { button.disabled = true; button.textContent = t('autostart.unavailable'); }
       return;
     }
     pill.className = `status-pill ${status.isEnabled ? 'enabled' : 'disabled'}`;
-    pill.textContent = status.isEnabled ? 'Включён' : 'Выключен';
-    if (provider) provider.textContent = `Провайдер: ${autoStartProviderLabel(status.provider)}.`;
+    pill.textContent = status.isEnabled ? t('autostart.enabledShort') : t('autostart.disabledShort');
+    if (provider) provider.textContent = t('autostart.providerValue', { provider: autoStartProviderLabel(status.provider) });
     if (entry) entry.textContent = status.entryPath
-      ? `Файл: ${status.entryPath}`
-      : 'Путь регистрации не определён.';
+      ? t('autostart.entryPath', { path: status.entryPath })
+      : t('autostart.entryUnknown');
     if (button) {
       button.disabled = false;
-      button.textContent = status.isEnabled ? 'Отключить автозапуск' : 'Включить автозапуск';
+      button.textContent = status.isEnabled ? t('autostart.disable') : t('autostart.enable');
     }
   }
 
   function updatePrintersSummary(printers) {
     const defaultPrinter = printers.find(p => p.isDefault)?.name
       || currentSettings?.defaultPrinterName
-      || 'Не выбран';
+      || t('job.defaultOption');
 
     const hintEl = document.getElementById('job-target-hint');
     if (hintEl) hintEl.textContent =
-      `Если принтер не выбран, PrintHub отправит задание на: ${defaultPrinter}.`;
+      `${t('job.targetDefault')} ${defaultPrinter}.`;
+  }
+
+  function updatePrintersButton(count) {
+    const button = document.getElementById('printers-btn');
+    if (!button) return;
+    button.textContent = '🖨 ' + (count > 0 ? t('printers.countShort', { count }) : '—');
   }
 
   function updateJobsSummary(jobs) {
@@ -2391,15 +2795,19 @@
     }
 
     document.getElementById('jobs-summary').innerHTML =
-      `<span class="count-chip pending">ожид ${counts.pending}</span>` +
-      `<span class="count-chip processing">печать ${counts.processing}</span>` +
-      `<span class="count-chip completed">готово ${counts.completed}</span>` +
-      `<span class="count-chip failed">ошибка ${counts.failed}</span>` +
-      `<span class="count-chip canceled">отмен ${counts.canceled}</span>`;
+      `<span class="count-chip pending">${esc(t('jobs.pending'))} ${counts.pending}</span>` +
+      `<span class="count-chip processing">${esc(t('jobs.processing'))} ${counts.processing}</span>` +
+      `<span class="count-chip completed">${esc(t('jobs.completed'))} ${counts.completed}</span>` +
+      `<span class="count-chip failed">${esc(t('jobs.failed'))} ${counts.failed}</span>` +
+      `<span class="count-chip canceled">${esc(t('jobs.canceled'))} ${counts.canceled}</span>`;
 
     document.getElementById('jobs-meta').textContent = jobs.length
-      ? `Обновлено: ${new Date().toLocaleTimeString('ru-RU')} · Активных: ${activeJobs} · Всего: ${jobs.length}`
-      : 'Очередь пуста.';
+      ? t('jobs.metaUpdated', {
+          time: new Date().toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          active: activeJobs,
+          total: jobs.length
+        })
+      : t('jobs.empty');
   }
 
   function updateQueueSummary(status) {
@@ -2413,19 +2821,19 @@
 
     if (!status) {
       pill.className = 'status-pill unsupported';
-      pill.textContent = 'Queue недоступна';
+      pill.textContent = t('queue.unavailable');
       toggle.disabled = true;
-      toggle.textContent = 'Пауза';
+      toggle.textContent = t('jobs.pause');
       clear.disabled = true;
       return;
     }
 
     pill.className = `status-pill ${status.isPaused ? 'busy' : 'ready'}`;
     pill.textContent = status.isPaused
-      ? `Пауза · ${status.queuedCount}`
-      : `Активна · ${status.queuedCount}`;
+      ? t('queue.pausedCount', { count: status.queuedCount })
+      : t('queue.activeCount', { count: status.queuedCount });
     toggle.disabled = false;
-    toggle.textContent = status.isPaused ? 'Возобновить' : 'Пауза';
+    toggle.textContent = status.isPaused ? t('jobs.resume') : t('jobs.pause');
     clear.disabled = status.queuedCount === 0;
   }
 
@@ -2443,10 +2851,19 @@
     return status === 'completed' || status === 'failed' || status === 'canceled';
   }
 
+  function documentSourceLabel(sourceType) {
+    switch (normalizeStatus(sourceType)) {
+      case 'upload': return t('document.upload');
+      case 'url': return t('document.url');
+      case 'base64': return t('document.base64');
+      default: return String(sourceType || 'unknown');
+    }
+  }
+
   function renderPrinterSelect(printers, previousValue = '') {
     const select = document.getElementById('printer-select');
     if (!select) return;
-    select.innerHTML = '<option value="">По умолчанию</option>' +
+    select.innerHTML = `<option value="">${esc(t('job.defaultOption'))}</option>` +
       printers.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
     if (previousValue && printers.some(p => p.name === previousValue)) {
       select.value = previousValue;
@@ -2470,39 +2887,81 @@
   }
 
   function authHeaders(apiKeyValue = apiKey) {
-    return apiKeyValue ? { 'X-PrintHub-Api-Key': apiKeyValue } : {};
+    if (!apiKeyValue) {
+      return {};
+    }
+
+    const headers = {
+      'Authorization': `Bearer ${apiKeyValue}`
+    };
+    const legacyHeaderName = currentSettings?.apiKeyHeaderName?.trim();
+
+    if (legacyHeaderName &&
+        legacyHeaderName.toLowerCase() !== 'authorization')
+    {
+      headers[legacyHeaderName] = apiKeyValue;
+    }
+
+    return headers;
   }
 
   function normalizeStatus(status) { return String(status || 'unknown').toLowerCase(); }
 
+  function normalizeDiagnosticSeverity(severity) {
+    const value = String(severity || 'info').toLowerCase();
+    if (value === 'warning') return 'warning';
+    if (value === 'error') return 'error';
+    return 'info';
+  }
+
+  function diagnosticSeverityLabel(severity) {
+    switch (normalizeDiagnosticSeverity(severity)) {
+      case 'warning': return t('diagSeverity.warning');
+      case 'error': return t('diagSeverity.error');
+      default: return t('diagSeverity.info');
+    }
+  }
+
   function statusLabel(status) {
-    return STATUS_LABELS[normalizeStatus(status)] || String(status || 'unknown');
+    return t(`status.${normalizeStatus(status)}`);
   }
 
   function printerStatusLabel(status) {
-    return PRINTER_STATUS_LABELS[normalizeStatus(status)] || String(status || 'unknown');
+    return t(`printerStatus.${normalizeStatus(status)}`);
   }
 
   function autoStartProviderLabel(provider) {
     switch (String(provider || '').toLowerCase()) {
-      case 'launch-agent':      return 'macOS LaunchAgent';
-      case 'startup-folder':   return 'Windows Startup folder';
-      case 'desktop-autostart': return 'Linux desktop autostart';
-      default: return provider || 'неизвестный провайдер';
+      case 'launch-agent':      return t('autostart.provider.launch-agent');
+      case 'startup-folder':   return t('autostart.provider.startup-folder');
+      case 'desktop-autostart': return t('autostart.provider.desktop-autostart');
+      default: return provider || t('common.unknownProvider');
+    }
+  }
+
+  function currentLocale() {
+    switch (currentLanguage) {
+      case 'en': return 'en-US';
+      case 'cs': return 'cs-CZ';
+      case 'uk': return 'uk-UA';
+      default: return 'ru-RU';
     }
   }
 
   function fmtTime(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
-    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      + ' ' + d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+    const locale = currentLocale();
+    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      + ' ' + d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
   }
 
   function formatBytes(value) {
     const size = Number(value) || 0;
-    if (size <= 0) return '0 Б';
-    const units = ['Б', 'КБ', 'МБ', 'ГБ'];
+    const units = currentLanguage === 'en'
+      ? ['B', 'KB', 'MB', 'GB']
+      : ['Б', 'КБ', 'МБ', 'ГБ'];
+    if (size <= 0) return `0 ${units[0]}`;
     const exp = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
     const amount = size / Math.pow(1024, exp);
     return `${amount.toFixed(amount >= 10 || exp === 0 ? 0 : 1)} ${units[exp]}`;
