@@ -35,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(createMenuItem("Open Dashboard", #selector(openDashboard), "o"))
+        menu.addItem(createMenuItem("Open Printers", #selector(openPrinters), "p"))
+        menu.addItem(createMenuItem("Open Settings", #selector(openSettings), ","))
         menu.addItem(createMenuItem("Start in Background", #selector(startInBackground), "s"))
         menu.addItem(createMenuItem("Restart PrintHub", #selector(restartPrintHub), "r"))
         menu.addItem(createMenuItem("Stop PrintHub", #selector(stopPrintHub), "x"))
@@ -58,6 +60,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openDashboard() {
         runScript(named: "run-printhub.sh", openBrowser: true)
+    }
+
+    @objc private func openPrinters() {
+        runScript(named: "run-printhub.sh", openBrowser: true, openUrlSuffix: "#printers")
+    }
+
+    @objc private func openSettings() {
+        runScript(named: "run-printhub.sh", openBrowser: true, openUrlSuffix: "#settings")
     }
 
     @objc private func startInBackground() {
@@ -100,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return item
     }
 
-    private func runScript(named scriptName: String, openBrowser: Bool) {
+    private func runScript(named scriptName: String, openBrowser: Bool, openUrlSuffix: String? = nil) {
         guard let payloadDirectory = resolveAppPayloadDirectory() else {
             showAlert(title: "PrintHub Tray", message: "Could not find the PrintHub launcher scripts.")
             return
@@ -120,6 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         var environment = ProcessInfo.processInfo.environment
         environment["PRINTHUB_OPEN_BROWSER"] = openBrowser ? "true" : "false"
+        if let openUrlSuffix, !openUrlSuffix.isEmpty {
+            environment["PRINTHUB_OPEN_URL_SUFFIX"] = openUrlSuffix
+        } else {
+            environment.removeValue(forKey: "PRINTHUB_OPEN_URL_SUFFIX")
+        }
         process.environment = environment
 
         do {

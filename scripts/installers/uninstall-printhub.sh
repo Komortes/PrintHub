@@ -24,6 +24,8 @@ uninstall_macos() {
 
   rm -rf "$install_dir"
   rm -rf "$tray_install_dir"
+  rm -f "$launchers_dir/Open PrintHub Settings.command"
+  rm -f "$launchers_dir/Open PrintHub Printers.command"
   rm -f "$launchers_dir/Open PrintHub Tray.command"
   rm -f "$launchers_dir/Stop PrintHub.command"
   rm -f "$launchers_dir/Uninstall PrintHub.command"

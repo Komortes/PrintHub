@@ -7,6 +7,7 @@ APP_DLL="$SCRIPT_DIR/PrintHub.Api.dll"
 DEFAULT_PORT="5051"
 START_TIMEOUT_SECONDS="${PRINTHUB_START_TIMEOUT_SECONDS:-30}"
 OPEN_BROWSER="${PRINTHUB_OPEN_BROWSER:-true}"
+OPEN_URL_SUFFIX="${PRINTHUB_OPEN_URL_SUFFIX:-}"
 
 resolve_default_home() {
   case "$(uname -s)" in
@@ -124,13 +125,15 @@ open_browser() {
     return
   fi
 
+  local target_url="$APP_URL$OPEN_URL_SUFFIX"
+
   if command -v open >/dev/null 2>&1; then
-    open "$APP_URL" >/dev/null 2>&1 &
+    open "$target_url" >/dev/null 2>&1 &
     return
   fi
 
   if command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$APP_URL" >/dev/null 2>&1 &
+    xdg-open "$target_url" >/dev/null 2>&1 &
   fi
 }
 

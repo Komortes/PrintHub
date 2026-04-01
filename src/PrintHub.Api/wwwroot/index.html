@@ -1366,11 +1366,81 @@
   let selectedFile    = null;
   let refreshTimer    = null;
   let toastTimer      = null;
+  let isApplyingHashRoute = false;
 
   // ── PANEL OPEN/CLOSE ──────────────────────────────────────
   let _openPanel = null;
 
-  function openPanel(name) {
+  function panelHash(name, options = {}) {
+    switch (name) {
+      case 'printers':
+        return '#printers';
+      case 'settings':
+        return '#settings';
+      case 'job':
+        return '#new-job';
+      case 'job-details':
+        return options.jobId ? `#job-details/${encodeURIComponent(options.jobId)}` : '#job-details';
+      default:
+        return '';
+    }
+  }
+
+  function setPanelHash(name, options = {}) {
+    if (isApplyingHashRoute) {
+      return;
+    }
+
+    const nextHash = panelHash(name, options);
+    const nextUrl = new URL(window.location.href);
+    nextUrl.hash = nextHash ? nextHash.slice(1) : '';
+    history.replaceState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+  }
+
+  function parseHashRoute() {
+    const value = window.location.hash.replace(/^#/, '');
+    if (!value) {
+      return null;
+    }
+
+    if (value === 'printers') return { panel: 'printers' };
+    if (value === 'settings') return { panel: 'settings' };
+    if (value === 'new-job' || value === 'job') return { panel: 'job' };
+    if (value === 'job-details') return { panel: 'job-details' };
+    if (value.startsWith('job-details/')) {
+      return {
+        panel: 'job-details',
+        jobId: decodeURIComponent(value.slice('job-details/'.length))
+      };
+    }
+
+    return null;
+  }
+
+  function applyHashRoute() {
+    const route = parseHashRoute();
+
+    if (!route) {
+      if (_openPanel) {
+        closePanel({ updateHash: false });
+      }
+      return;
+    }
+
+    isApplyingHashRoute = true;
+    try {
+      if (route.panel === 'job-details' && route.jobId) {
+        openJobDetails(route.jobId, { updateHash: false });
+        return;
+      }
+
+      openPanel(route.panel, { updateHash: false });
+    } finally {
+      isApplyingHashRoute = false;
+    }
+  }
+
+  function openPanel(name, options = {}) {
     if (_openPanel && _openPanel !== name) {
       document.getElementById('panel-' + _openPanel).classList.remove('open');
     }
@@ -1382,20 +1452,28 @@
     if (name === 'printers') loadPanelPrinters();
     if (name === 'settings') loadSettingsIntoPanel();
     if (name === 'job') loadPrinters();
+    if (options.updateHash !== false) {
+      setPanelHash(name, options);
+    }
   }
 
-  function closePanel() {
+  function closePanel(options = {}) {
     if (_openPanel) {
       document.getElementById('panel-' + _openPanel).classList.remove('open');
       _openPanel = null;
     }
     document.getElementById('panel-backdrop').classList.remove('open');
     document.body.classList.remove('panel-open');
+    if (options.updateHash !== false) {
+      setPanelHash('');
+    }
   }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && _openPanel) { closePanel(); }
   });
+
+  window.addEventListener('hashchange', applyHashRoute);
 
   function t(key, params = {}) {
     return translate(key, params, currentLanguage);
@@ -1667,6 +1745,7 @@
     await loadQueueStatus();
     await loadJobs();
     startAutoRefresh();
+    applyHashRoute();
   }
 
   async function checkHealth() {
@@ -2467,9 +2546,12 @@
     }
   }
 
-  async function openJobDetails(jobId) {
+  async function openJobDetails(jobId, options = {}) {
     currentJobDetailsId = jobId;
-    openPanel('job-details');
+    openPanel('job-details', { updateHash: false });
+    if (options.updateHash !== false) {
+      setPanelHash('job-details', { jobId });
+    }
 
     const title = document.getElementById('job-details-title');
     const content = document.getElementById('job-details-content');

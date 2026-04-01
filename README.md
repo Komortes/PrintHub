@@ -113,6 +113,10 @@ The launcher:
 On macOS the publish output may also contain `PrintHub Tray.app`. This is a small
 menu bar helper that can start, stop and reopen PrintHub without keeping a terminal open.
 The publish folder also includes `open-printhub-tray.command` as a one-click launcher.
+It also includes direct panel shortcuts:
+
+- `open-printhub-settings.command`
+- `open-printhub-printers.command`
 
 You can also override the startup URL manually:
 
@@ -144,6 +148,8 @@ After install on macOS you get:
 - `~/Applications/PrintHub.app`
 - `~/Applications/PrintHub Tray.app` when the tray helper was built
 - `~/Applications/Open PrintHub Tray.command` when the tray helper was built
+- `~/Applications/Open PrintHub Settings.command`
+- `~/Applications/Open PrintHub Printers.command`
 - `~/Applications/Stop PrintHub.command`
 - `~/Applications/Uninstall PrintHub.command`
 

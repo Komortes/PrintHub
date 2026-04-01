@@ -57,6 +57,8 @@ On macOS this installs:
 
 - `~/Applications/PrintHub.app`
 - `~/Applications/PrintHub Tray.app` if the tray helper is available
+- `~/Applications/Open PrintHub Settings.command`
+- `~/Applications/Open PrintHub Printers.command`
 - `~/Applications/Stop PrintHub.command`
 - `~/Applications/Uninstall PrintHub.command`
 
@@ -119,6 +121,8 @@ If `PrintHub Tray.app` is present, you can keep PrintHub available from the macO
 The tray helper can:
 
 - open the dashboard
+- open the `Printers` panel directly
+- open the `Settings` panel directly
 - start PrintHub in the background
 - stop PrintHub
 - open the runtime folder
