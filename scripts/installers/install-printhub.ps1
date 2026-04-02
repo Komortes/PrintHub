@@ -42,6 +42,16 @@ powershell -ExecutionPolicy Bypass -File "%~dp0run-printhub.ps1" %*
 
 @'
 @echo off
+powershell -ExecutionPolicy Bypass -File "%~dp0open-printhub-settings.ps1" %*
+'@ | Set-Content (Join-Path $InstallDir "Open PrintHub Settings.cmd") -Encoding Ascii
+
+@'
+@echo off
+powershell -ExecutionPolicy Bypass -File "%~dp0open-printhub-printers.ps1" %*
+'@ | Set-Content (Join-Path $InstallDir "Open PrintHub Printers.cmd") -Encoding Ascii
+
+@'
+@echo off
 powershell -ExecutionPolicy Bypass -File "%~dp0stop-printhub.ps1" %*
 '@ | Set-Content (Join-Path $InstallDir "Stop PrintHub.cmd") -Encoding Ascii
 
@@ -53,6 +63,18 @@ New-Shortcut `
     -Path (Join-Path $ProgramsDir "PrintHub.lnk") `
     -TargetPath $powershellPath `
     -Arguments "-ExecutionPolicy Bypass -File `"$InstallDir\run-printhub.ps1`"" `
+    -WorkingDirectory $InstallDir
+
+New-Shortcut `
+    -Path (Join-Path $ProgramsDir "PrintHub Settings.lnk") `
+    -TargetPath $powershellPath `
+    -Arguments "-ExecutionPolicy Bypass -File `"$InstallDir\open-printhub-settings.ps1`"" `
+    -WorkingDirectory $InstallDir
+
+New-Shortcut `
+    -Path (Join-Path $ProgramsDir "PrintHub Printers.lnk") `
+    -TargetPath $powershellPath `
+    -Arguments "-ExecutionPolicy Bypass -File `"$InstallDir\open-printhub-printers.ps1`"" `
     -WorkingDirectory $InstallDir
 
 New-Shortcut `
@@ -70,3 +92,5 @@ New-Shortcut `
 Write-Host "PrintHub was installed for the current user."
 Write-Host "  App files:   $InstallDir"
 Write-Host "  Start menu:  $ProgramsDir"
+Write-Host "  Settings:    $ProgramsDir\PrintHub Settings.lnk"
+Write-Host "  Printers:    $ProgramsDir\PrintHub Printers.lnk"

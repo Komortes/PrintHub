@@ -44,6 +44,13 @@ Then start PrintHub with:
 output/publish/<runtime>/run-printhub.sh
 ```
 
+Optional direct launchers in the publish folder:
+
+- `open-printhub-settings.sh`
+- `open-printhub-printers.sh`
+- `open-printhub-settings.ps1`
+- `open-printhub-printers.ps1`
+
 ### Option 3: Install for the current user
 
 Recommended for a normal user:
@@ -63,6 +70,21 @@ On macOS this installs:
 - `~/Applications/Uninstall PrintHub.command`
 
 No admin rights are required.
+
+On Linux the installer also creates desktop shortcuts for:
+
+- `PrintHub`
+- `PrintHub Settings`
+- `PrintHub Printers`
+- `Stop PrintHub`
+
+On Windows the installer creates Start Menu shortcuts for:
+
+- `PrintHub`
+- `PrintHub Settings`
+- `PrintHub Printers`
+- `Stop PrintHub`
+- `Uninstall PrintHub`
 
 ## First launch
 

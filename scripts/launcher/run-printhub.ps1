@@ -1,5 +1,6 @@
 param(
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [string]$OpenUrlSuffix
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,7 +78,17 @@ function Open-PrintHubBrowser {
         return
     }
 
-    Start-Process $script:AppUrl | Out-Null
+    $suffix = if (-not [string]::IsNullOrWhiteSpace($OpenUrlSuffix)) {
+        $OpenUrlSuffix
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_OPEN_URL_SUFFIX)) {
+        $env:PRINTHUB_OPEN_URL_SUFFIX
+    }
+    else {
+        ""
+    }
+
+    Start-Process "$script:AppUrl$suffix" | Out-Null
 }
 
 $env:PRINTHUB_HOME = Resolve-PrintHubHome

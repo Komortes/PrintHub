@@ -115,6 +115,10 @@ menu bar helper that can start, stop and reopen PrintHub without keeping a termi
 The publish folder also includes `open-printhub-tray.command` as a one-click launcher.
 It also includes direct panel shortcuts:
 
+- `open-printhub-settings.sh`
+- `open-printhub-printers.sh`
+- `open-printhub-settings.ps1`
+- `open-printhub-printers.ps1`
 - `open-printhub-settings.command`
 - `open-printhub-printers.command`
 
@@ -154,6 +158,14 @@ After install on macOS you get:
 - `~/Applications/Uninstall PrintHub.command`
 
 On Windows the installer also creates Start Menu shortcuts for start, stop and uninstall.
+It now also creates direct `PrintHub Settings` and `PrintHub Printers` shortcuts.
+
+On Linux the installer creates desktop entries for:
+
+- `PrintHub`
+- `PrintHub Settings`
+- `PrintHub Printers`
+- `Stop PrintHub`
 
 The installer works in user space and does not require admin rights.
 

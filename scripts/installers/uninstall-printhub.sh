@@ -40,7 +40,11 @@ uninstall_linux() {
   local applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
   rm -rf "$install_dir"
-  rm -f "$applications_dir/printhub.desktop" "$applications_dir/printhub-stop.desktop"
+  rm -f \
+    "$applications_dir/printhub.desktop" \
+    "$applications_dir/printhub-stop.desktop" \
+    "$applications_dir/printhub-settings.desktop" \
+    "$applications_dir/printhub-printers.desktop"
 
   echo "PrintHub was removed from:"
   echo "  $install_dir"

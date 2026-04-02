@@ -142,6 +142,8 @@ install_linux() {
   local applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   local launcher_path="$install_dir/PrintHub"
   local stop_launcher_path="$install_dir/PrintHub-stop"
+  local settings_launcher_path="$install_dir/PrintHub-settings"
+  local printers_launcher_path="$install_dir/PrintHub-printers"
 
   copy_directory "$SCRIPT_DIR" "$install_dir"
 
@@ -154,6 +156,16 @@ exec "$SCRIPT_DIR/run-printhub.sh" "$@"'
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 exec "$SCRIPT_DIR/stop-printhub.sh" "$@"'
+
+  write_executable_file "$settings_launcher_path" '#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$SCRIPT_DIR/open-printhub-settings.sh" "$@"'
+
+  write_executable_file "$printers_launcher_path" '#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$SCRIPT_DIR/open-printhub-printers.sh" "$@"'
 
   mkdir -p "$applications_dir"
 
@@ -179,9 +191,33 @@ Terminal=false
 Categories=Office;Utility;
 EOF
 
+  cat > "$applications_dir/printhub-settings.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PrintHub Settings
+Comment=Open local PrintHub settings
+Exec=$settings_launcher_path
+Terminal=false
+Categories=Office;Utility;
+EOF
+
+  cat > "$applications_dir/printhub-printers.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PrintHub Printers
+Comment=Open local PrintHub printers panel
+Exec=$printers_launcher_path
+Terminal=false
+Categories=Office;Utility;
+EOF
+
   echo "PrintHub was installed for the current user."
   echo "  App files:      $install_dir"
   echo "  Desktop entry:  $applications_dir/printhub.desktop"
+  echo "  Settings:       $applications_dir/printhub-settings.desktop"
+  echo "  Printers:       $applications_dir/printhub-printers.desktop"
 }
 
 platform="$(detect_platform)"

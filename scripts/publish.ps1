@@ -13,10 +13,16 @@ $ProjectPath = Join-Path $RootDir "src/PrintHub.Api/PrintHub.Api.csproj"
 function Install-SupportScripts {
     Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.sh") (Join-Path $OutputDir "run-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.sh") (Join-Path $OutputDir "stop-printhub.sh") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-settings.sh") (Join-Path $OutputDir "open-printhub-settings.sh") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-printers.sh") (Join-Path $OutputDir "open-printhub-printers.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.ps1") (Join-Path $OutputDir "run-printhub.ps1") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.ps1") (Join-Path $OutputDir "stop-printhub.ps1") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-settings.ps1") (Join-Path $OutputDir "open-printhub-settings.ps1") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-printers.ps1") (Join-Path $OutputDir "open-printhub-printers.ps1") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.command") (Join-Path $OutputDir "run-printhub.command") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.command") (Join-Path $OutputDir "stop-printhub.command") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-settings.command") (Join-Path $OutputDir "open-printhub-settings.command") -Force
+    Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-printers.command") (Join-Path $OutputDir "open-printhub-printers.command") -Force
     Copy-Item (Join-Path $RootDir "scripts/installers/install-printhub.sh") (Join-Path $OutputDir "install-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/installers/uninstall-printhub.sh") (Join-Path $OutputDir "uninstall-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/installers/install-printhub.ps1") (Join-Path $OutputDir "install-printhub.ps1") -Force
@@ -92,6 +98,10 @@ Write-Host "  PRINTHUB_HOME=C:\absolute\path"
 Write-Host ""
 Write-Host "Run the published app with:"
 Write-Host "  $OutputDir\run-printhub.ps1"
+Write-Host "Open Settings directly with:"
+Write-Host "  $OutputDir\open-printhub-settings.ps1"
+Write-Host "Open Printers directly with:"
+Write-Host "  $OutputDir\open-printhub-printers.ps1"
 Write-Host ""
 Write-Host "Stop the background service with:"
 Write-Host "  $OutputDir\stop-printhub.ps1"
