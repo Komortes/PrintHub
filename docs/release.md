@@ -59,8 +59,11 @@ The verify scripts check:
 3. `run-printhub` starts the service
 4. `/health` returns successfully
 5. `stop-printhub` stops the service
+6. diagnostics artifacts are captured into `verify-artifacts/`
 
 Set `PRINTHUB_VERIFY_KEEP=true` on macOS/Linux or `-KeepFiles` on Windows if you want to inspect the temporary install after verification.
+
+When verification fails, the workspace is kept automatically and the script prints tails from installer / launcher logs so startup problems are easier to diagnose.
 
 ## macOS signing
 
