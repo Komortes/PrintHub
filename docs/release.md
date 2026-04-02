@@ -33,6 +33,35 @@ The staged folder contains:
 - `docs/` with README, API reference and user guide
 - on macOS: `Applications/PrintHub.app` created from the packaged launcher flow
 
+## Verify a release package
+
+Before signing or shipping, run a local smoke check against either:
+
+- a publish directory
+- a staged release directory
+
+macOS/Linux:
+
+```bash
+./scripts/release/verify-release.sh output/release/osx-arm64/PrintHub-osx-arm64
+```
+
+Windows PowerShell:
+
+```powershell
+./scripts/release/verify-release.ps1 -SourceDir output/release/win-x64/PrintHub-win-x64
+```
+
+The verify scripts check:
+
+1. install for the current user into a temporary location
+2. platform shortcuts / launchers are created
+3. `run-printhub` starts the service
+4. `/health` returns successfully
+5. `stop-printhub` stops the service
+
+Set `PRINTHUB_VERIFY_KEEP=true` on macOS/Linux or `-KeepFiles` on Windows if you want to inspect the temporary install after verification.
+
 ## macOS signing
 
 Set the signing identity and run:

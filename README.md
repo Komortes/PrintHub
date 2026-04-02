@@ -85,6 +85,16 @@ For a distributable archive intended for end users, use:
 ./scripts/release/build-release.ps1
 ```
 
+Then verify the package locally before shipping:
+
+```bash
+./scripts/release/verify-release.sh output/release/osx-arm64/PrintHub-osx-arm64
+```
+
+```powershell
+./scripts/release/verify-release.ps1 -SourceDir output/release/win-x64/PrintHub-win-x64
+```
+
 Override self-contained mode only if you explicitly want a framework-dependent build:
 
 ```bash

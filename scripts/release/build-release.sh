@@ -142,4 +142,7 @@ Checksum:    $ARTIFACT_PATH.sha256
 On macOS you can now optionally sign and notarize the staged app bundle with:
   $ROOT_DIR/scripts/release/macos/sign-macos-release.sh "$STAGE_DIR"
   $ROOT_DIR/scripts/release/macos/notarize-macos-release.sh "$STAGE_DIR" "$ARTIFACT_PATH"
+
+Verify the staged package locally with:
+  $ROOT_DIR/scripts/release/verify-release.sh "$STAGE_DIR"
 EOF
