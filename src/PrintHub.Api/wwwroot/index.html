@@ -1130,6 +1130,7 @@
       <div class="btn-row" style="margin-bottom:10px;">
         <button class="btn btn-sm" type="button" onclick="copyDiagnosticReport()" data-i18n="diagnostics.copyReport">Копировать отчёт</button>
         <button class="btn btn-sm btn-ghost" type="button" onclick="downloadDiagnosticReport()" data-i18n="diagnostics.downloadReport">Скачать .txt</button>
+        <button class="btn btn-sm btn-ghost" type="button" onclick="downloadSupportBundle()" data-i18n="diagnostics.downloadBundle">Скачать .zip</button>
       </div>
       <div id="printer-diagnostics-summary" class="diag-summary" data-i18n="diagnostics.loading">Загрузка диагностики...</div>
       <div id="printer-diagnostics-checks" class="diag-list"></div>
@@ -1728,6 +1729,48 @@
       if (!preloadedReport) {
         showToast(t('diagnostics.downloaded'));
       }
+    } catch (error) {
+      showToast(t('common.error', { message: error.message }), true);
+    }
+  }
+
+  function extractDownloadFileName(contentDisposition) {
+    if (!contentDisposition) {
+      return null;
+    }
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      return decodeURIComponent(utf8Match[1]);
+    }
+
+    const plainMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+    return plainMatch?.[1] || null;
+  }
+
+  async function downloadSupportBundle() {
+    try {
+      const response = await fetch('/diagnostics/support-bundle', {
+        headers: authHeaders(resolveRequestApiKey())
+      });
+
+      if (!response.ok) {
+        throw new Error(t('diagnostics.bundleFetchFailed', { status: response.status }));
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = extractDownloadFileName(response.headers.get('content-disposition'))
+        || `printhub-support-${stamp}.zip`;
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast(t('diagnostics.bundleDownloaded'));
     } catch (error) {
       showToast(t('common.error', { message: error.message }), true);
     }

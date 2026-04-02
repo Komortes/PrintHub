@@ -82,6 +82,12 @@ X-PrintHub-Api-Key: {{ApiKey}}
 
 ###
 
+GET {{PrintHub.Api_HostAddress}}/diagnostics/support-bundle
+Accept: application/zip
+Authorization: Bearer {{ApiKey}}
+
+###
+
 PUT {{PrintHub.Api_HostAddress}}/printers/printer_1/default
 Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}

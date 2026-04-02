@@ -232,6 +232,48 @@ Sends a test PDF page to the printer.
 
 ---
 
+### Diagnostics
+
+#### `GET /printers/diagnostics`
+
+Returns structured backend diagnostics for the current platform backend.
+
+**Response 200**
+```json
+{
+  "backend": "mock",
+  "isSupported": true,
+  "summary": "Mock backend is active.",
+  "checks": [],
+  "printers": [],
+  "recommendations": []
+}
+```
+
+#### `GET /diagnostics/report`
+
+Returns a plain-text diagnostics report that is safe to share for support. The API key value is **not** included.
+
+**Response 200** — `text/plain`
+
+#### `GET /diagnostics/support-bundle`
+
+Downloads a support bundle as `.zip`. The bundle contains:
+- `diagnostics/report.txt`
+- `diagnostics/backend-diagnostics.json`
+- `settings/settings.public.json`
+- `queue/status.json`
+- `jobs/recent-jobs.json`
+- `runtime/paths.json`
+- `manifest.json`
+- recent log files from `logs/` when available
+
+Printed documents and the raw API key value are not included.
+
+**Response 200** — `application/zip`
+
+---
+
 ### Print Jobs
 
 #### Print Job object
