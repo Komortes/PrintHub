@@ -10,6 +10,19 @@ $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $PublishScript = Join-Path $RootDir "scripts/publish.ps1"
 
+function Get-PrintHubVersion {
+    if (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_VERSION)) {
+        return $env:PRINTHUB_VERSION
+    }
+
+    $versionFile = Join-Path $RootDir "VERSION"
+    if (Test-Path $versionFile) {
+        return (Get-Content $versionFile -Raw).Trim()
+    }
+
+    return "0.1.0"
+}
+
 function Get-HostRuntime {
     switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
         "Arm64" { $arch = "arm64" }
@@ -53,7 +66,8 @@ if ([string]::IsNullOrWhiteSpace($PublishDir)) {
     $PublishDir = Join-Path $RootDir "output/publish/$Runtime"
 }
 
-$StageName = "PrintHub-$Runtime"
+$AppVersion = Get-PrintHubVersion
+$StageName = "PrintHub-$AppVersion-$Runtime"
 $StageDir = Join-Path $ReleaseRoot $StageName
 
 New-Item -ItemType Directory -Force -Path $ReleaseRoot | Out-Null
@@ -69,11 +83,13 @@ if (-not (Test-Path $PublishDir)) {
 Copy-Directory $PublishDir (Join-Path $StageDir "payload")
 New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "docs") | Out-Null
 Copy-Item (Join-Path $RootDir "README.md") (Join-Path $StageDir "docs/README.md") -Force
+Copy-Item (Join-Path $RootDir "CHANGELOG.md") (Join-Path $StageDir "docs/CHANGELOG.md") -Force
 Copy-Item (Join-Path $RootDir "docs/api.md") (Join-Path $StageDir "docs/api.md") -Force
 Copy-Item (Join-Path $RootDir "docs/user-guide.md") (Join-Path $StageDir "docs/user-guide.md") -Force
 
 $Manifest = @{
     name = "PrintHub"
+    version = $AppVersion
     runtime = $Runtime
     artifactName = $StageName
     builtAtUtc = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -100,6 +116,7 @@ Get-FileHash $ArtifactPath -Algorithm SHA256 | ForEach-Object {
 
 Write-Host ""
 Write-Host "Release package completed."
+Write-Host "  Version:   $AppVersion"
 Write-Host "  Runtime:   $Runtime"
 Write-Host "  Stage dir: $StageDir"
 Write-Host "  Artifact:  $ArtifactPath"

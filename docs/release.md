@@ -19,13 +19,14 @@ Windows PowerShell:
 
 Outputs:
 
-- staged release folder in `output/release/<runtime>/PrintHub-<runtime>`
+- staged release folder in `output/release/<runtime>/PrintHub-<version>-<runtime>`
 - packaged archive:
-  - macOS: `PrintHub-<runtime>.zip`
-  - Linux: `PrintHub-<runtime>.tar.gz`
-  - Windows: `PrintHub-<runtime>.zip`
+  - macOS: `PrintHub-<version>-<runtime>.zip`
+  - Linux: `PrintHub-<version>-<runtime>.tar.gz`
+  - Windows: `PrintHub-<version>-<runtime>.zip`
 - checksum file `*.sha256`
 - `RELEASE-MANIFEST.json`
+- copied `CHANGELOG.md`
 
 The staged folder contains:
 
@@ -43,13 +44,13 @@ Before signing or shipping, run a local smoke check against either:
 macOS/Linux:
 
 ```bash
-./scripts/release/verify-release.sh output/release/osx-arm64/PrintHub-osx-arm64
+./scripts/release/verify-release.sh output/release/osx-arm64/PrintHub-0.1.0-osx-arm64
 ```
 
 Windows PowerShell:
 
 ```powershell
-./scripts/release/verify-release.ps1 -SourceDir output/release/win-x64/PrintHub-win-x64
+./scripts/release/verify-release.ps1 -SourceDir output/release/win-x64/PrintHub-0.1.0-win-x64
 ```
 
 The verify scripts check:
@@ -64,6 +65,13 @@ The verify scripts check:
 Set `PRINTHUB_VERIFY_KEEP=true` on macOS/Linux or `-KeepFiles` on Windows if you want to inspect the temporary install after verification.
 
 When verification fails, the workspace is kept automatically and the script prints tails from installer / launcher logs so startup problems are easier to diagnose.
+
+The release version comes from [VERSION](../VERSION) and is also written into:
+
+- the .NET assemblies
+- macOS app bundle metadata
+- release archive names
+- `RELEASE-MANIFEST.json`
 
 ## macOS signing
 

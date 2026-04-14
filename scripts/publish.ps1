@@ -10,7 +10,21 @@ $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $ProjectPath = Join-Path $RootDir "src/PrintHub.Api/PrintHub.Api.csproj"
 
+function Get-PrintHubVersion {
+    if (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_VERSION)) {
+        return $env:PRINTHUB_VERSION
+    }
+
+    $versionFile = Join-Path $RootDir "VERSION"
+    if (Test-Path $versionFile) {
+        return (Get-Content $versionFile -Raw).Trim()
+    }
+
+    return "0.1.0"
+}
+
 function Install-SupportScripts {
+    Copy-Item (Join-Path $RootDir "VERSION") (Join-Path $OutputDir "VERSION") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/run-printhub.sh") (Join-Path $OutputDir "run-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/stop-printhub.sh") (Join-Path $OutputDir "stop-printhub.sh") -Force
     Copy-Item (Join-Path $RootDir "scripts/launcher/open-printhub-settings.sh") (Join-Path $OutputDir "open-printhub-settings.sh") -Force
@@ -69,7 +83,10 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $RootDir "output/publish/$Runtime"
 }
 
+$AppVersion = Get-PrintHubVersion
+
 Write-Host "Publishing PrintHub"
+Write-Host "  Version:        $AppVersion"
 Write-Host "  Runtime:        $Runtime"
 Write-Host "  Configuration:  $Configuration"
 Write-Host "  Self-contained: $SelfContained"

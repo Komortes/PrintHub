@@ -3,6 +3,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+resolve_app_version() {
+  if [[ -n "${PRINTHUB_VERSION:-}" ]]; then
+    printf '%s\n' "$PRINTHUB_VERSION"
+    return
+  fi
+
+  if [[ -f "$SCRIPT_DIR/VERSION" ]]; then
+    tr -d '\r' < "$SCRIPT_DIR/VERSION" | head -n 1
+    return
+  fi
+
+  printf '%s\n' "0.1.0"
+}
+
 detect_platform() {
   case "$(uname -s)" in
     Darwin)
@@ -43,6 +57,8 @@ write_executable_file() {
 
 install_macos() {
   local install_dir="${1:-${INSTALL_ROOT:-$HOME/Applications/PrintHub.app}}"
+  local app_version
+  app_version="$(resolve_app_version)"
   local bundle_name
   bundle_name="$(basename "$install_dir")"
   local contents_dir="$install_dir/Contents"
@@ -61,7 +77,7 @@ install_macos() {
     copy_directory "$SCRIPT_DIR/PrintHub Tray.app" "$tray_install_dir"
   fi
 
-  cat > "$contents_dir/Info.plist" <<'EOF'
+  cat > "$contents_dir/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -77,9 +93,9 @@ install_macos() {
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>1.0</string>
+  <string>$app_version</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>$app_version</string>
 </dict>
 </plist>
 EOF
@@ -124,6 +140,7 @@ APP_DIR="$SCRIPT_DIR/'"$bundle_name"'/Contents/Resources/app"
 exec "$APP_DIR/uninstall-printhub.sh" "$SCRIPT_DIR/'"$bundle_name"'"'
 
   echo "PrintHub was installed for the current user."
+  echo "  Version:      $app_version"
   echo "  App bundle:   $install_dir"
   if [[ -d "$tray_install_dir" ]]; then
     echo "  Tray app:     $tray_install_dir"
@@ -139,6 +156,8 @@ exec "$APP_DIR/uninstall-printhub.sh" "$SCRIPT_DIR/'"$bundle_name"'"'
 
 install_linux() {
   local install_dir="${1:-${INSTALL_ROOT:-$HOME/.local/opt/PrintHub}}"
+  local app_version
+  app_version="$(resolve_app_version)"
   local applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
   local launcher_path="$install_dir/PrintHub"
   local stop_launcher_path="$install_dir/PrintHub-stop"
@@ -172,7 +191,7 @@ exec "$SCRIPT_DIR/open-printhub-printers.sh" "$@"'
   cat > "$applications_dir/printhub.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Version=1.0
+Version=$app_version
 Name=PrintHub
 Comment=Local print gateway
 Exec=$launcher_path
@@ -183,7 +202,7 @@ EOF
   cat > "$applications_dir/printhub-stop.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Version=1.0
+Version=$app_version
 Name=Stop PrintHub
 Comment=Stop local PrintHub service
 Exec=$stop_launcher_path
@@ -194,7 +213,7 @@ EOF
   cat > "$applications_dir/printhub-settings.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Version=1.0
+Version=$app_version
 Name=PrintHub Settings
 Comment=Open local PrintHub settings
 Exec=$settings_launcher_path
@@ -205,7 +224,7 @@ EOF
   cat > "$applications_dir/printhub-printers.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Version=1.0
+Version=$app_version
 Name=PrintHub Printers
 Comment=Open local PrintHub printers panel
 Exec=$printers_launcher_path
@@ -214,6 +233,7 @@ Categories=Office;Utility;
 EOF
 
   echo "PrintHub was installed for the current user."
+  echo "  Version:        $app_version"
   echo "  App files:      $install_dir"
   echo "  Desktop entry:  $applications_dir/printhub.desktop"
   echo "  Settings:       $applications_dir/printhub-settings.desktop"

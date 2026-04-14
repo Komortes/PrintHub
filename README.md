@@ -4,9 +4,14 @@ PrintHub is a local HTTP service for printer discovery and PDF print jobs.
 
 Quick links:
 
+- [Changelog](./CHANGELOG.md)
 - [User guide](./docs/user-guide.md)
 - [API reference](./docs/api.md)
 - [Release guide](./docs/release.md)
+
+Current release candidate:
+
+- `0.1.0`
 
 ## Run in development
 
@@ -74,6 +79,7 @@ Windows PowerShell:
 ```
 
 Both scripts publish `src/PrintHub.Api` into `output/publish/<runtime>`.
+The publish folder now also includes a copied `VERSION` file, so installers and tray metadata keep the same release number as the repo.
 
 For a distributable archive intended for end users, use:
 
@@ -88,11 +94,11 @@ For a distributable archive intended for end users, use:
 Then verify the package locally before shipping:
 
 ```bash
-./scripts/release/verify-release.sh output/release/osx-arm64/PrintHub-osx-arm64
+./scripts/release/verify-release.sh output/release/osx-arm64/PrintHub-0.1.0-osx-arm64
 ```
 
 ```powershell
-./scripts/release/verify-release.ps1 -SourceDir output/release/win-x64/PrintHub-win-x64
+./scripts/release/verify-release.ps1 -SourceDir output/release/win-x64/PrintHub-0.1.0-win-x64
 ```
 
 Override self-contained mode only if you explicitly want a framework-dependent build:
@@ -182,11 +188,13 @@ The installer works in user space and does not require admin rights.
 ## Release packaging
 
 Distributable release artifacts are created in `output/release/<runtime>`.
+Artifact names are versioned as `PrintHub-<version>-<runtime>`.
 
 Each release package includes:
 
 - self-contained payload
 - end-user docs
+- changelog
 - release manifest
 - checksum
 
@@ -223,3 +231,20 @@ Auto-start uses the packaged launcher scripts, so it keeps the saved port and ru
 4. Open `Printers`, discover the OS printers and add the devices you actually want to expose.
 5. Set one printer as default and send a test print.
 6. Give the API key to the external system that will call `POST /print-jobs`.
+
+## Release prep
+
+PrintHub now keeps a repository-level release version in [VERSION](./VERSION).
+For `0.1.0` the repo is prepared to:
+
+- build versioned self-contained publish output
+- produce versioned release archives and manifests
+- include `README`, API docs, user guide and changelog in the staged release
+- verify the staged package with captured diagnostics artifacts
+
+Before shipping to real users, still do:
+
+- one clean `publish` on the target runtime
+- one real `verify-release` run against the fresh staged package
+- one live printer smoke test on the target OS
+- macOS `codesign/notarization` if you distribute outside local testing

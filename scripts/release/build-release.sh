@@ -4,6 +4,20 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PUBLISH_SCRIPT="$ROOT_DIR/scripts/publish.sh"
 
+read_version() {
+  if [[ -n "${PRINTHUB_VERSION:-}" ]]; then
+    printf '%s\n' "$PRINTHUB_VERSION"
+    return
+  fi
+
+  if [[ -f "$ROOT_DIR/VERSION" ]]; then
+    tr -d '\r' < "$ROOT_DIR/VERSION" | head -n 1
+    return
+  fi
+
+  printf '%s\n' "0.1.0"
+}
+
 detect_runtime() {
   local os arch
   os="$(uname -s)"
@@ -49,7 +63,8 @@ write_manifest() {
   local stage_dir="$1"
   local runtime="$2"
   local artifact_name="$3"
-  local commit_sha built_at
+  local commit_sha built_at app_version
+  app_version="$4"
 
   commit_sha="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || printf '%s' 'unknown')"
   built_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -57,6 +72,7 @@ write_manifest() {
   cat > "$stage_dir/RELEASE-MANIFEST.json" <<EOF
 {
   "name": "PrintHub",
+  "version": "$app_version",
   "runtime": "$runtime",
   "artifactName": "$artifact_name",
   "builtAtUtc": "$built_at",
@@ -99,7 +115,8 @@ package_release() {
 RUNTIME="${1:-$(detect_runtime)}"
 RELEASE_ROOT="${2:-$ROOT_DIR/output/release/$RUNTIME}"
 PUBLISH_DIR="${PUBLISH_DIR:-$ROOT_DIR/output/publish/$RUNTIME}"
-STAGE_NAME="PrintHub-$RUNTIME"
+APP_VERSION="$(read_version)"
+STAGE_NAME="PrintHub-$APP_VERSION-$RUNTIME"
 STAGE_DIR="$RELEASE_ROOT/$STAGE_NAME"
 INCLUDE_PUBLISH="${INCLUDE_PUBLISH:-true}"
 
@@ -117,9 +134,10 @@ fi
 copy_directory "$PUBLISH_DIR" "$STAGE_DIR/payload"
 mkdir -p "$STAGE_DIR/docs"
 cp "$ROOT_DIR/README.md" "$STAGE_DIR/docs/README.md"
+cp "$ROOT_DIR/CHANGELOG.md" "$STAGE_DIR/docs/CHANGELOG.md"
 cp "$ROOT_DIR/docs/user-guide.md" "$STAGE_DIR/docs/user-guide.md"
 cp "$ROOT_DIR/docs/api.md" "$STAGE_DIR/docs/api.md"
-write_manifest "$STAGE_DIR" "$RUNTIME" "$STAGE_NAME"
+write_manifest "$STAGE_DIR" "$RUNTIME" "$STAGE_NAME" "$APP_VERSION"
 
 case "$RUNTIME" in
   osx-*)
@@ -134,6 +152,7 @@ cat <<EOF
 
 Release package completed.
 
+Version:     $APP_VERSION
 Runtime:     $RUNTIME
 Stage dir:   $STAGE_DIR
 Artifact:    $ARTIFACT_PATH

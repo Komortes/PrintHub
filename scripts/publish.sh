@@ -4,7 +4,22 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_PATH="$ROOT_DIR/src/PrintHub.Api/PrintHub.Api.csproj"
 
+read_version() {
+  if [[ -n "${PRINTHUB_VERSION:-}" ]]; then
+    printf '%s\n' "$PRINTHUB_VERSION"
+    return
+  fi
+
+  if [[ -f "$ROOT_DIR/VERSION" ]]; then
+    tr -d '\r' < "$ROOT_DIR/VERSION" | head -n 1
+    return
+  fi
+
+  printf '%s\n' "0.1.0"
+}
+
 install_support_scripts() {
+  cp "$ROOT_DIR/VERSION" "$OUTPUT_DIR/VERSION"
   cp "$ROOT_DIR/scripts/launcher/run-printhub.sh" "$OUTPUT_DIR/run-printhub.sh"
   cp "$ROOT_DIR/scripts/launcher/stop-printhub.sh" "$OUTPUT_DIR/stop-printhub.sh"
   cp "$ROOT_DIR/scripts/launcher/open-printhub-settings.sh" "$OUTPUT_DIR/open-printhub-settings.sh"
@@ -54,7 +69,7 @@ build_macos_tray_if_available() {
     return
   fi
 
-  bash "$ROOT_DIR/scripts/tray/macos/build-printhub-tray.sh" "$OUTPUT_DIR"
+  PRINTHUB_VERSION="$APP_VERSION" bash "$ROOT_DIR/scripts/tray/macos/build-printhub-tray.sh" "$OUTPUT_DIR"
 }
 
 detect_runtime() {
@@ -87,8 +102,10 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 RUNTIME="${1:-$(detect_runtime)}"
 OUTPUT_DIR="${2:-$ROOT_DIR/output/publish/$RUNTIME}"
 SELF_CONTAINED="${SELF_CONTAINED:-true}"
+APP_VERSION="$(read_version)"
 
 echo "Publishing PrintHub"
+echo "  Version:        $APP_VERSION"
 echo "  Runtime:        $RUNTIME"
 echo "  Configuration:  $CONFIGURATION"
 echo "  Self-contained: $SELF_CONTAINED"

@@ -8,12 +8,13 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 SRC_FILE="$ROOT_DIR/scripts/tray/macos/PrintHubTray.swift"
 MODULE_CACHE_DIR="${TMPDIR:-/tmp}/printhub-tray-module-cache"
+APP_VERSION="${PRINTHUB_VERSION:-$(tr -d '\r' < "$ROOT_DIR/VERSION" | head -n 1)}"
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$MODULE_CACHE_DIR"
 
-cat > "$CONTENTS_DIR/Info.plist" <<'EOF'
+cat > "$CONTENTS_DIR/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -31,9 +32,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<'EOF'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>1.0</string>
+  <string>$APP_VERSION</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>$APP_VERSION</string>
   <key>LSUIElement</key>
   <true/>
 </dict>
@@ -50,3 +51,4 @@ chmod +x "$MACOS_DIR/PrintHubTray"
 
 echo "Built macOS tray helper:"
 echo "  $APP_DIR"
+echo "  Version: $APP_VERSION"
