@@ -573,6 +573,91 @@ public sealed class PrintJobsTests
         }
     }
 
+    [Fact]
+    public async Task CleanupEndpoint_DeletesCompletedJobs()
+    {
+        using var factory = new PrintHubApiFactory();
+        using var client = factory.CreateClient();
+
+        // Create and complete a job
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, "/print-jobs")
+        {
+            Content = JsonContent.Create(
+                new CreatePrintJobRequest(
+                    PrinterName: "Office Printer",
+                    Copies: 1,
+                    Document: new PrintDocumentRequest(
+                        DocumentSourceType.Base64,
+                        PrintDocumentFormat.Pdf,
+                        Url: null,
+                        Data: PdfBase64,
+                        FileName: "cleanup-test.pdf")),
+                options: TestJson.SerializerOptions)
+        };
+        createRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var createResponse = await client.SendAsync(createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var created = await createResponse.Content.ReadFromJsonAsync<CreatePrintJobResponse>(TestJson.SerializerOptions);
+        Assert.NotNull(created);
+
+        await WaitForCompletionAsync(client, created!.JobId);
+
+        // Call cleanup endpoint (same endpoint CleanupWorker calls internally)
+        using var cleanupReq = new HttpRequestMessage(HttpMethod.Post, "/print-jobs/cleanup");
+        cleanupReq.Headers.Add(ApiKeyHeaderName, ApiKey);
+        var cleanupResp = await client.SendAsync(cleanupReq);
+        Assert.Equal(HttpStatusCode.OK, cleanupResp.StatusCode);
+
+        // Verify job is gone
+        using var listReq = new HttpRequestMessage(HttpMethod.Get, "/print-jobs?limit=100");
+        listReq.Headers.Add(ApiKeyHeaderName, ApiKey);
+        var listResp = await client.SendAsync(listReq);
+        var jobs = await listResp.Content.ReadFromJsonAsync<PrintJobDto[]>(TestJson.SerializerOptions);
+        Assert.NotNull(jobs);
+        Assert.DoesNotContain(jobs!, j => j.JobId == created.JobId);
+    }
+
+    [Fact]
+    public async Task CreatePrintJob_Returns422_WhenPrinterNameNotRegistered()
+    {
+        // Register only "printer_1" via /printers
+        var overrides = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        using var factory = new PrintHubApiFactory(overrides);
+        using var client = factory.CreateClient();
+
+        // Register printer_1
+        using var addReq = new HttpRequestMessage(HttpMethod.Post, "/printers")
+        {
+            Content = JsonContent.Create(new { id = "printer_1" }),
+            Headers = { { "X-PrintHub-Api-Key", "test-api-key" } }
+        };
+        var addResp = await client.SendAsync(addReq);
+        addResp.EnsureSuccessStatusCode();
+
+        // Submit job for an unregistered printer
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, "/print-jobs")
+        {
+            Content = JsonContent.Create(
+                new CreatePrintJobRequest(
+                    PrinterName: "not_registered",
+                    Copies: 1,
+                    Document: new PrintDocumentRequest(
+                        DocumentSourceType.Base64,
+                        PrintDocumentFormat.Pdf,
+                        Url: null,
+                        Data: PdfBase64,
+                        FileName: "bad-printer.pdf")),
+                options: TestJson.SerializerOptions)
+        };
+        createRequest.Headers.Add("X-PrintHub-Api-Key", "test-api-key");
+
+        var createResponse = await client.SendAsync(createRequest);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, createResponse.StatusCode);
+    }
+
     private static async Task<PrintJobDto> WaitForCompletionAsync(HttpClient client, string jobId)
     {
         return await WaitForStatusAsync(client, jobId, PrintJobStatus.Completed, PrintJobStatus.Failed);

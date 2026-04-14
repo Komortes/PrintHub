@@ -583,12 +583,22 @@
       letter-spacing: 0.06em;
       text-transform: uppercase;
       border: 1px solid transparent;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
     }
     .job-badge.pending    { background: var(--amber-bg); color: var(--amber); border-color: rgba(245,158,11,0.2); }
     .job-badge.processing { background: var(--blue-bg); color: var(--blue); border-color: rgba(59,130,246,0.2); }
     .job-badge.completed  { background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.2); }
     .job-badge.failed     { background: var(--red-bg); color: var(--red); border-color: rgba(239,68,68,0.2); }
     .job-badge.canceled   { background: rgba(255,255,255,0.04); color: var(--muted); }
+
+    .job-badge-pulse {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      margin-right: 4px;
+      animation: dotpulse 1.6s ease-in-out infinite;
+    }
 
     .job-error { font-size: 11px; color: var(--red); margin-top: 2px; line-height: 1.3; }
     .job-actions { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -853,6 +863,92 @@
       padding: 14px;
     }
 
+    /* ── PRINTER CARD ────────────────────────── */
+    .printer-card {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+    }
+    .printer-card:last-child { margin-bottom: 0; }
+
+    .printer-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .printer-card-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--muted2);
+    }
+    .printer-card-dot.ready {
+      background: var(--green);
+      animation: dotpulse 2.4s ease-in-out infinite;
+    }
+    .printer-card-dot.busy    { background: var(--amber); }
+    .printer-card-dot.error,
+    .printer-card-dot.offline { background: var(--red); }
+
+    .printer-card-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .printer-card-actions {
+      display: flex;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .printer-card-actions .btn-icon {
+      padding: 2px 7px;
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      line-height: 1.4;
+      transition: background 0.1s, color 0.1s;
+    }
+    .printer-card-actions .btn-icon:hover { background: rgba(255,255,255,.09); color: var(--text); }
+    .printer-card-actions .btn-icon.delete:hover { background: rgba(239,68,68,.12); color: var(--red); border-color: rgba(239,68,68,.3); }
+    .printer-card-actions .btn-icon:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+    .printer-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 7px;
+      padding-left: 16px;
+    }
+
+    .printer-card-chip {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+      white-space: nowrap;
+    }
+    .printer-card-chip.tcp {
+      color: var(--blue);
+      background: var(--blue-bg);
+      border-color: rgba(59,130,246,.2);
+      font-family: var(--font-mono);
+    }
+
     /* ── PRINTER PANEL ROW ────────────────────── */
     .printer-panel-row {
       display: flex;
@@ -912,6 +1008,42 @@
     }
     .printer-panel-row .btn-icon:hover { background: rgba(255,255,255,0.07); color: var(--text); }
     .panel-empty { font-size: 13px; color: var(--muted); padding: 8px 0; }
+
+    /* ── SKELETON ────────────────────────────── */
+    @keyframes skeleton-shimmer {
+      to { transform: translateX(200%); }
+    }
+    .skeleton {
+      position: relative;
+      overflow: hidden;
+      background: rgba(255,255,255,.04);
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .skeleton::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 25%,
+        rgba(255,255,255,.08) 50%,
+        transparent 75%
+      );
+      transform: translateX(-100%);
+      animation: skeleton-shimmer 1.4s infinite linear;
+    }
+    .skeleton-card {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+    }
+    .skeleton-row-cell {
+      height: 12px;
+      display: block;
+    }
 
     /* ── DISCOVER SECTION ─────────────────────── */
     .discover-divider {
@@ -1529,10 +1661,10 @@
   async function loadPanelPrinters() {
     const regList = document.getElementById('registered-printers-list');
     const discList = document.getElementById('discovered-printers-list');
+    renderPrinterSkeleton();
     const diagSummary = document.getElementById('printer-diagnostics-summary');
     const diagChecks = document.getElementById('printer-diagnostics-checks');
     const diagRecommendations = document.getElementById('printer-diagnostics-recommendations');
-    regList.innerHTML = `<div class="panel-empty">${esc(t('common.loading'))}</div>`;
     discList.innerHTML = '';
     if (diagSummary) diagSummary.textContent = t('diagnostics.loading');
     if (diagChecks) diagChecks.innerHTML = '';
@@ -1561,21 +1693,7 @@
 
       updatePrintersButton(registered.length);
 
-      if (registered.length === 0) {
-        regList.innerHTML = `<div class="panel-empty">${esc(t('printers.noneRegistered'))}</div>`;
-      } else {
-        regList.innerHTML = registered.map(p => {
-          const st = normalizeStatus(p.status);
-          const stLabel = printerStatusLabel(st);
-          return `
-          <div class="printer-panel-row">
-            <span class="printer-name-wrap"><span class="printer-name">${esc(p.name)}</span></span>
-            <span class="status-pill ${st}">${stLabel}</span>
-            <button class="btn-icon" title="${escAttr(t('jobs.actions.delete'))}" onclick="removePanelPrinter('${escAttr(p.id)}')">✕</button>
-          </div>`;
-        }).join('');
-        setupMarquee(regList);
-      }
+      renderPrinterList(registered, regList);
 
       if (discovered.length === 0) {
         discList.innerHTML = `<div class="panel-empty">${esc(t('printers.allAdded'))}</div>`;
@@ -1604,16 +1722,6 @@
     });
     if (res.ok) { showToast(t('printers.added')); loadPanelPrinters(); }
     else showToast(t('printers.addFailed'), true);
-  }
-
-  async function removePanelPrinter(id) {
-    const key = resolveRequestApiKey();
-    const res = await fetch('/printers/' + encodeURIComponent(id), {
-      method: 'DELETE',
-      headers: authHeaders(key)
-    });
-    if (res.ok) { showToast(t('printers.removed')); loadPanelPrinters(); }
-    else showToast(t('printers.removeFailed'), true);
   }
 
   function setupMarquee(container) {
@@ -2031,34 +2139,104 @@
     }
   }
 
-  function renderPrinterList(printers, listEl) {
+  function renderPrinterSkeleton() {
+    const listEl = document.getElementById('registered-printers-list');
     if (!listEl) return;
-    listEl.innerHTML = printers.map(printer => `
-      <div class="printer-row">
-        <span class="printer-dot ${normalizeStatus(printer.status)}"></span>
-        <div class="printer-info">
-          <div class="printer-name-text">${esc(printer.name)}</div>
-          <div class="printer-id-text">${esc(printer.id)}</div>
+    listEl.innerHTML = [1, 2].map(() => `
+      <div class="skeleton-card">
+        <div class="printer-card-header" style="gap:8px;">
+          <span style="width:8px;height:8px;border-radius:50%;" class="skeleton"></span>
+          <span class="skeleton skeleton-row-cell" style="width:55%;height:13px;"></span>
+          <span class="skeleton skeleton-row-cell" style="width:48px;height:22px;margin-left:auto;border-radius:3px;"></span>
         </div>
-        ${printer.isDefault ? `<span class="badge-default">${esc(t('printers.defaultBadge'))}</span>` : ''}
-        <div class="printer-acts">
-          <button class="btn btn-sm btn-ghost"
-            type="button"
-            ${printer.isDefault ? 'disabled' : ''}
-            onclick="setDefaultPrinter('${escAttr(printer.id)}')"
-            title="${escAttr(printer.isDefault ? t('printers.alreadyDefault') : t('printers.makeDefault'))}"
-          >${printer.isDefault ? '★' : '☆'}</button>
-          <button class="btn btn-sm btn-ghost"
-            type="button"
-            onclick="testPrinter('${escAttr(printer.id)}')"
-            title="${escAttr(t('printers.testPrint'))}"
-          >⎙</button>
+        <div class="printer-card-meta">
+          <span class="skeleton skeleton-row-cell" style="width:120px;height:20px;border-radius:3px;"></span>
+          <span class="skeleton skeleton-row-cell" style="width:60px;height:20px;border-radius:3px;"></span>
         </div>
       </div>
     `).join('');
   }
 
-  async function setDefaultPrinter(printerId) {
+  function renderJobsSkeleton() {
+    const container = document.getElementById('jobs-container');
+    if (!container) return;
+    const colWidths = ['80px', '120px', '70px', '30px', '90px', '90px', '80px'];
+    const rows = Array.from({ length: 5 }, () => `
+      <tr>
+        ${colWidths.map(w => `
+          <td style="padding:10px 12px;">
+            <span class="skeleton skeleton-row-cell" style="width:${w};height:12px;display:block;"></span>
+          </td>
+        `).join('')}
+      </tr>
+    `).join('');
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            ${colWidths.map(() => '<th style="padding:7px 12px;"><span class="skeleton skeleton-row-cell" style="width:60px;height:10px;display:block;"></span></th>').join('')}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function renderPrinterList(printers, listEl) {
+    if (!listEl) return;
+    if (!Array.isArray(printers) || !printers.length) {
+      listEl.innerHTML = `<div class="panel-empty">${esc(t('printers.none'))}</div>`;
+      return;
+    }
+    listEl.innerHTML = printers.map(printer => {
+      const status = normalizeStatus(printer.status);
+      const isDefault = printer.isDefault;
+      const metaChips = buildPrinterMetaChips(printer);
+      return `
+        <div class="printer-card">
+          <div class="printer-card-header">
+            <span class="printer-card-dot ${status}"></span>
+            <span class="printer-card-name" title="${escAttr(printer.name)}">${esc(printer.name)}</span>
+            ${isDefault ? `<span class="badge-default">${esc(t('printers.defaultBadge'))}</span>` : ''}
+            <div class="printer-card-actions">
+              <button class="btn-icon"
+                type="button"
+                ${isDefault ? 'disabled' : ''}
+                onclick="setDefaultPrinter(this,${JSON.stringify(printer.id)})"
+                title="${escAttr(isDefault ? t('printers.alreadyDefault') : t('printers.makeDefault'))}"
+              >${isDefault ? '★' : '☆'}</button>
+              <button class="btn-icon"
+                type="button"
+                onclick="testPrinter(this,${JSON.stringify(printer.id)})"
+                title="${escAttr(t('printers.testPrint'))}"
+              >⎙</button>
+              <button class="btn-icon delete"
+                type="button"
+                onclick="removePrinter(this,${JSON.stringify(printer.id)})"
+                title="${escAttr(t('printers.remove'))}"
+              >✕</button>
+            </div>
+          </div>
+          ${metaChips ? `<div class="printer-card-meta">${metaChips}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function buildPrinterMetaChips(printer) {
+    const chips = [];
+    if (printer.id && printer.id.startsWith('tcp://')) {
+      chips.push(`<span class="printer-card-chip tcp">${esc(printer.id)}</span>`);
+    } else if (printer.id && printer.id.startsWith('\\\\')) {
+      chips.push(`<span class="printer-card-chip">${esc(printer.id)}</span>`);
+    } else if (printer.id && printer.id !== printer.name) {
+      chips.push(`<span class="printer-card-chip">${esc(printer.id)}</span>`);
+    }
+    return chips.join('');
+  }
+
+  async function setDefaultPrinter(btn, printerId) {
+    btn.disabled = true;
     try {
       const response = await fetch(`/printers/${encodeURIComponent(printerId)}/default`, {
         method: 'PUT',
@@ -2077,10 +2255,13 @@
       await loadPrinters();
     } catch (error) {
       showToast(t('common.error', { message: error.message }), true);
+    } finally {
+      btn.disabled = false;
     }
   }
 
-  async function testPrinter(printerId) {
+  async function testPrinter(btn, printerId) {
+    btn.disabled = true;
     try {
       const response = await fetch(`/printers/${encodeURIComponent(printerId)}/test-print`, {
         method: 'POST',
@@ -2096,6 +2277,29 @@
       await loadJobs();
     } catch (error) {
       showToast(t('common.error', { message: error.message }), true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function removePrinter(btn, printerId) {
+    btn.disabled = true;
+    try {
+      const response = await fetch(`/printers/${encodeURIComponent(printerId)}`, {
+        method: 'DELETE',
+        headers: authHeaders(resolveRequestApiKey())
+      });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        showToast(detail.detail || t('printers.removeFailed'), true);
+        return;
+      }
+      showToast(t('printers.removed'));
+      await loadPanelPrinters();
+    } catch (error) {
+      showToast(t('common.error', { message: error.message }), true);
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -2346,6 +2550,12 @@
   async function loadJobs() {
     const container = document.getElementById('jobs-container');
     const status    = document.getElementById('status-filter').value;
+
+    // Show skeleton only on first load (container has no table yet)
+    if (!container.querySelector('table') && !container.querySelector('.empty-state[data-loaded]')) {
+      renderJobsSkeleton();
+    }
+
     let url = '/print-jobs?limit=100';
     if (status) url += `&status=${status}`;
 
@@ -2356,17 +2566,20 @@
         queueStatus = null;
         updateQueueSummary(null);
         updateJobsSummary([]);
-        container.innerHTML = `<div class="empty-state">${esc(t('jobs.noAccess'))}</div>`;
+        container.innerHTML = `<div class="empty-state" data-loaded="1">${esc(t('jobs.noAccess'))}</div>`;
         return;
       }
       jobsCache = await response.json();
       await loadQueueStatus();
       updateJobsSummary(jobsCache);
+
       if (!jobsCache.length) {
-        container.innerHTML = `<div class="empty-state">${esc(t('jobs.empty'))}</div>`;
+        container.innerHTML = `<div class="empty-state" data-loaded="1">${esc(t('jobs.empty'))}</div>`;
         return;
       }
-      container.innerHTML = `
+
+      // Build new HTML
+      const newHtml = `
         <table>
           <thead>
             <tr>
@@ -2381,14 +2594,14 @@
           </thead>
           <tbody>
             ${jobsCache.map(job => `
-              <tr>
+              <tr data-job-id="${escAttr(job.jobId)}">
                 <td>
                   <div class="job-id-short">${esc(job.jobId.slice(0, 8))}…</div>
                   <div class="job-id-full">${esc(job.jobId)}</div>
                 </td>
                 <td>${esc(job.printerName || t('common.systemDefaultPrinter'))}</td>
                 <td>
-                  <span class="job-badge ${normalizeStatus(job.status)}">${statusLabel(job.status)}</span>
+                  <span class="job-badge ${normalizeStatus(job.status)}" data-status="${escAttr(job.status)}">${job.status === 'processing' ? '<span class="job-badge-pulse"></span>' : ''}${statusLabel(job.status)}</span>
                   ${job.errorMessage ? `<div class="job-error">${esc(job.errorMessage)}</div>` : ''}
                 </td>
                 <td>${job.copies}</td>
@@ -2397,9 +2610,9 @@
                 <td>
                   <div class="job-actions">
                     <button class="btn btn-sm btn-ghost" type="button" onclick="openJobDetails('${escAttr(job.jobId)}')">${esc(t('jobs.actions.details'))}</button>
-                    ${canCancelJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="cancelJob('${escAttr(job.jobId)}')">${esc(t('jobs.actions.cancel'))}</button>` : ''}
-                    ${canRetryJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="retryJob('${escAttr(job.jobId)}')">${esc(t('jobs.actions.retry'))}</button>` : ''}
-                    ${canDeleteJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="deleteJob('${escAttr(job.jobId)}')">${esc(t('jobs.actions.delete'))}</button>` : ''}
+                    ${canCancelJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="cancelJob(this,'${escAttr(job.jobId)}')">${esc(t('jobs.actions.cancel'))}</button>` : ''}
+                    ${canRetryJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="retryJob(this,'${escAttr(job.jobId)}')">${esc(t('jobs.actions.retry'))}</button>` : ''}
+                    ${canDeleteJob(job) ? `<button class="btn btn-sm btn-ghost" type="button" onclick="deleteJob(this,'${escAttr(job.jobId)}')">${esc(t('jobs.actions.delete'))}</button>` : ''}
                   </div>
                 </td>
               </tr>
@@ -2407,12 +2620,42 @@
           </tbody>
         </table>
       `;
+
+      // Collect current badge states before replacing DOM
+      const prevStatuses = {};
+      container.querySelectorAll('tr[data-job-id]').forEach(row => {
+        const badge = row.querySelector('.job-badge[data-status]');
+        if (badge) prevStatuses[row.dataset.jobId] = badge.dataset.status;
+      });
+
+      // Full DOM replace
+      container.innerHTML = newHtml;
+
+      // Animate badge for rows whose status changed
+      container.querySelectorAll('tr[data-job-id]').forEach(row => {
+        const jobId = row.dataset.jobId;
+        const badge = row.querySelector('.job-badge[data-status]');
+        if (!badge || !prevStatuses[jobId]) return;
+        const oldStatus = normalizeStatus(prevStatuses[jobId]);
+        const newStatus = normalizeStatus(badge.dataset.status);
+        if (oldStatus === newStatus) return;
+        // Apply old class first, then swap to new in next frame to trigger CSS transition
+        badge.classList.remove(newStatus);
+        badge.classList.add(oldStatus);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (!badge.isConnected) return;
+            badge.classList.remove(oldStatus);
+            badge.classList.add(newStatus);
+          });
+        });
+      });
     } catch {
       jobsCache = [];
       queueStatus = null;
       updateQueueSummary(null);
       updateJobsSummary([]);
-      container.innerHTML = `<div class="empty-state">${esc(t('jobs.loadFailed'))}</div>`;
+      container.innerHTML = `<div class="empty-state" data-loaded="1">${esc(t('jobs.loadFailed'))}</div>`;
     }
   }
 
@@ -2425,7 +2668,8 @@
     refreshTimer = setInterval(loadJobs, 5000);
   }
 
-  async function cancelJob(jobId) {
+  async function cancelJob(btn, jobId) {
+    btn.disabled = true;
     try {
       const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}/cancel`, {
         method: 'POST',
@@ -2442,10 +2686,13 @@
       await loadJobs();
     } catch (error) {
       showToast(t('common.error', { message: error.message }), true);
+    } finally {
+      btn.disabled = false;
     }
   }
 
-  async function retryJob(jobId) {
+  async function retryJob(btn, jobId) {
+    btn.disabled = true;
     try {
       const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}/retry`, {
         method: 'POST',
@@ -2463,14 +2710,17 @@
       await loadJobs();
     } catch (error) {
       showToast(t('common.error', { message: error.message }), true);
+    } finally {
+      btn.disabled = false;
     }
   }
 
-  async function deleteJob(jobId) {
+  async function deleteJob(btn, jobId) {
     if (!confirm(t('jobs.confirmDelete', { jobId: jobId.slice(0, 8) }))) {
       return;
     }
 
+    btn.disabled = true;
     try {
       const response = await fetch(`/print-jobs/${encodeURIComponent(jobId)}`, {
         method: 'DELETE',
@@ -2494,6 +2744,8 @@
       await loadJobs();
     } catch (error) {
       showToast(t('common.error', { message: error.message }), true);
+    } finally {
+      btn.disabled = false;
     }
   }
 

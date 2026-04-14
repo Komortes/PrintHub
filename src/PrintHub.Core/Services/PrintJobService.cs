@@ -43,12 +43,23 @@ public sealed class PrintJobService : IPrintJobService
             throw new ArgumentOutOfRangeException(nameof(request), "Copies must be at least 1.");
         }
 
-        var jobId = Guid.NewGuid().ToString("n");
-        var document = await _documentPipeline.PrepareAsync(jobId, request.Document, cancellationToken);
         var settings = await _settingsService.GetAsync(cancellationToken);
         var printerName = string.IsNullOrWhiteSpace(request.PrinterName)
             ? settings.DefaultPrinterName
             : request.PrinterName;
+
+        if (printerName is not null
+            && settings.Printers.Count > 0
+            && !settings.Printers.Any(p =>
+                string.Equals(p.Name, printerName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(p.Id, printerName, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                $"Printer '{printerName}' is not registered. Register it first via the printers panel.");
+        }
+
+        var jobId = Guid.NewGuid().ToString("n");
+        var document = await _documentPipeline.PrepareAsync(jobId, request.Document, cancellationToken);
         var job = PrintJob.Create(
             jobId,
             printerName,

@@ -127,6 +127,7 @@ builder.Services.AddSingleton<IPrintDocumentGarbageCollector, FileSystemPrintDoc
 builder.Services.AddSingleton<IPrintJobService, PrintJobService>();
 builder.Services.AddSingleton<IPrintHubSupportBundleService, PrintHubSupportBundleService>();
 builder.Services.AddHostedService<PrintJobWorker>();
+builder.Services.AddHostedService<CleanupWorker>();
 
 var app = builder.Build();
 
@@ -499,7 +500,16 @@ protectedApi.MapPost("/print-jobs", async Task<IResult> (
 
         return TypedResults.Created($"/print-jobs/{createdJob.JobId}", createdJob);
     }
-    catch (Exception exception) when (exception is InvalidOperationException or InvalidDataException or JsonException or ArgumentException or HttpRequestException)
+    catch (InvalidOperationException exception)
+    {
+        return TypedResults.UnprocessableEntity(new ProblemDetails
+        {
+            Title = "Invalid print job request",
+            Detail = exception.Message,
+            Status = StatusCodes.Status422UnprocessableEntity
+        });
+    }
+    catch (Exception exception) when (exception is InvalidDataException or JsonException or ArgumentException or HttpRequestException)
     {
         return TypedResults.BadRequest(new ProblemDetails
         {
