@@ -1,6 +1,7 @@
 # PrintHub
 
 PrintHub is a local HTTP service for printer discovery and PDF print jobs.
+It is meant to bridge web systems and printers installed on a user workstation.
 
 Quick links:
 
@@ -12,6 +13,43 @@ Quick links:
 Current release candidate:
 
 - `0.1.0`
+
+## Project status
+
+PrintHub is now in a solid public demo state:
+
+- local dashboard with onboarding, printer registry and job history
+- REST API for health, printers, print jobs, settings and diagnostics
+- background worker, queue controls, retry/cancel, SQLite job history
+- self-contained publish, user installers, tray helper and release scripts
+
+What still needs real-world QA before calling it production-ready:
+
+- live printer verification on real Windows and macOS machines
+- final macOS signing and notarization for distribution outside local testing
+
+## Why this exists
+
+Cloud systems do not have direct access to printers installed on a user machine.
+PrintHub runs locally, accepts HTTP requests, and forwards documents to local printers
+through a platform backend.
+
+Typical flow:
+
+1. A website, ERP or CRM calls `POST /print-jobs`.
+2. PrintHub receives or downloads the PDF.
+3. PrintHub places the job into a local queue.
+4. A background worker sends it to the selected printer.
+
+## What works now
+
+- printer discovery and registration
+- default printer selection and test print
+- print jobs via URL, multipart upload and Base64
+- queue pause/resume/clear and job cancel/retry/delete
+- diagnostics report and support bundle export
+- local auth via `Authorization: Bearer <api-key>`
+- cross-platform packaging flow for local installs
 
 ## Run in development
 
@@ -33,6 +71,10 @@ For external integrations, use:
 
 - `Authorization: Bearer <api-key>` as the preferred auth style
 - the configured custom API key header only for legacy compatibility
+
+The development config and `.http` examples intentionally use a clearly fake value:
+
+- `demo-local-api-key`
 
 ## Runtime data location
 
@@ -110,6 +152,13 @@ SELF_CONTAINED=false ./scripts/publish.sh
 ```powershell
 ./scripts/publish.ps1 -SelfContained false
 ```
+
+## CI
+
+The repository includes a basic GitHub Actions workflow that restores, builds and tests
+the solution on every push and pull request:
+
+- [.github/workflows/ci.yml](./.github/workflows/ci.yml)
 
 ## Start the published app
 

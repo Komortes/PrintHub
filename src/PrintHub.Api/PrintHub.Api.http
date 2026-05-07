@@ -1,5 +1,5 @@
 @PrintHub.Api_HostAddress = http://localhost:5051
-@ApiKey = dev-local-api-key
+@ApiKey = demo-local-api-key
 @jobId = replace-me
 
 GET {{PrintHub.Api_HostAddress}}/health
@@ -34,7 +34,7 @@ X-PrintHub-Api-Key: {{ApiKey}}
   "serviceName": "PrintHub",
   "port": 5051,
   "apiKeyHeaderName": "X-PrintHub-Api-Key",
-  "apiKey": "dev-local-api-key",
+  "apiKey": "demo-local-api-key",
   "defaultPrinterName": "Office Printer",
   "storageDirectory": "data/documents",
   "maxUploadSizeBytes": 10485760
@@ -59,7 +59,7 @@ Accept: application/json
 X-PrintHub-Api-Key: {{ApiKey}}
 
 {
-  "apiKey": "dev-local-api-key"
+  "apiKey": "demo-local-api-key"
 }
 
 ###
