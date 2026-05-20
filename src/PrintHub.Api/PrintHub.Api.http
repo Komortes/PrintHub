@@ -33,6 +33,7 @@ X-PrintHub-Api-Key: {{ApiKey}}
 {
   "serviceName": "PrintHub",
   "port": 5051,
+  "bindHost": "127.0.0.1",
   "apiKeyHeaderName": "X-PrintHub-Api-Key",
   "apiKey": "demo-local-api-key",
   "defaultPrinterName": "Office Printer",

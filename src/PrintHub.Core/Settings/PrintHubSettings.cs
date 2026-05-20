@@ -6,15 +6,19 @@ namespace PrintHub.Core.Settings;
 public sealed record PrintHubSettings(
     string ServiceName,
     int Port,
+    string BindHost,
     string ApiKeyHeaderName,
     string? ApiKey,
     string? DefaultPrinterName,
     string StorageDirectory,
     long MaxUploadSizeBytes)
 {
+    public const string DefaultBindHost = "127.0.0.1";
+
     public static PrintHubSettings CreateDefaults(
         string serviceName,
         int port,
+        string bindHost,
         string apiKeyHeaderName,
         string? apiKey,
         string? defaultPrinterName,
@@ -23,25 +27,43 @@ public sealed record PrintHubSettings(
         new(
             NormalizeRequired(serviceName, nameof(serviceName)),
             ValidatePort(port),
+            ValidateBindHost(bindHost),
             NormalizeRequired(apiKeyHeaderName, nameof(apiKeyHeaderName)),
             NormalizeOptional(apiKey),
             NormalizeOptional(defaultPrinterName),
             NormalizeRequired(storageDirectory, nameof(storageDirectory)),
             ValidateMaxUploadSize(maxUploadSizeBytes));
 
-    public static PrintHubSettings FromRequest(UpdatePrintHubSettingsRequest request)
+    public static PrintHubSettings FromRequest(
+        UpdatePrintHubSettingsRequest request,
+        string? fallbackBindHost = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         return new PrintHubSettings(
             NormalizeRequired(request.ServiceName, nameof(request.ServiceName)),
             ValidatePort(request.Port),
+            ValidateBindHost(request.BindHost, fallbackBindHost),
             NormalizeRequired(request.ApiKeyHeaderName, nameof(request.ApiKeyHeaderName)),
             NormalizeOptional(request.ApiKey),
             NormalizeOptional(request.DefaultPrinterName),
             NormalizeRequired(request.StorageDirectory, nameof(request.StorageDirectory)),
             ValidateMaxUploadSize(request.MaxUploadSizeBytes));
     }
+
+    public PrintHubSettings ApplyDefaults(PrintHubSettings defaults) =>
+        CreateDefaults(
+            string.IsNullOrWhiteSpace(ServiceName) ? defaults.ServiceName : ServiceName,
+            Port is < 1 or > 65535 ? defaults.Port : Port,
+            NormalizeOptional(BindHost) ?? defaults.BindHost,
+            string.IsNullOrWhiteSpace(ApiKeyHeaderName) ? defaults.ApiKeyHeaderName : ApiKeyHeaderName,
+            ApiKey,
+            DefaultPrinterName,
+            string.IsNullOrWhiteSpace(StorageDirectory) ? defaults.StorageDirectory : StorageDirectory,
+            MaxUploadSizeBytes < 1 ? defaults.MaxUploadSizeBytes : MaxUploadSizeBytes) with
+        {
+            Printers = Printers ?? []
+        };
 
     private static string NormalizeRequired(string? value, string paramName) =>
         string.IsNullOrWhiteSpace(value)
@@ -55,6 +77,24 @@ public sealed record PrintHubSettings(
         port is < 1 or > 65535
             ? throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1 and 65535.")
             : port;
+
+    private static string ValidateBindHost(string? bindHost, string? fallbackBindHost = null)
+    {
+        var normalized = NormalizeOptional(bindHost)
+            ?? NormalizeOptional(fallbackBindHost)
+            ?? DefaultBindHost;
+
+        if (normalized.Contains("://", StringComparison.Ordinal)
+            || normalized.Contains('/')
+            || normalized.Contains('\\'))
+        {
+            throw new ArgumentException(
+                "Bind host must be a host name or IP address without scheme or path.",
+                nameof(bindHost));
+        }
+
+        return normalized;
+    }
 
     private static long ValidateMaxUploadSize(long maxUploadSizeBytes) =>
         maxUploadSizeBytes < 1

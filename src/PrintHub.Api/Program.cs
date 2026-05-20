@@ -22,6 +22,7 @@ using PrintHub.Infrastructure.Paths;
 using PrintHub.Infrastructure.Platform;
 using PrintHub.Infrastructure.Repositories;
 using PrintHub.Infrastructure.Settings;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
@@ -36,6 +37,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 var appDataPaths = PrintHubAppDataPaths.CreateDefault();
+ConfigureStartupUrls(builder, appDataPaths);
 
 builder.Services.AddOpenApi();
 var fileLoggerOptions = builder.Configuration
@@ -97,6 +99,7 @@ builder.Services.AddSingleton<IPrintHubSettingsService>(serviceProvider =>
     var defaults = PrintHubSettings.CreateDefaults(
         options.ServiceName,
         options.Port,
+        options.BindHost,
         options.ApiKeyHeaderName,
         options.ApiKey,
         null,
@@ -751,6 +754,7 @@ static PrintHubSettingsDto ToSettingsDto(PrintHubSettings settings) =>
     new(
         settings.ServiceName,
         settings.Port,
+        settings.BindHost,
         settings.ApiKeyHeaderName,
         settings.ApiKey,
         settings.DefaultPrinterName,
@@ -812,6 +816,7 @@ static UpdatePrintHubSettingsRequest ToUpdateRequest(PrintHubSettings settings, 
     new(
         settings.ServiceName,
         settings.Port,
+        settings.BindHost,
         settings.ApiKeyHeaderName,
         settings.ApiKey,
         defaultPrinterName,
@@ -828,6 +833,71 @@ static CreatePrintJobRequest CreateTestPrintJobRequest(string printerName) =>
             Url: null,
             Data: TestPrintDocumentBase64,
             FileName: "print-hub-test-page.pdf"));
+
+static void ConfigureStartupUrls(WebApplicationBuilder builder, PrintHubAppDataPaths appDataPaths)
+{
+    if (!string.IsNullOrWhiteSpace(builder.Configuration[WebHostDefaults.ServerUrlsKey]))
+    {
+        return;
+    }
+
+    var options = builder.Configuration
+        .GetSection(PrintHubApiOptions.SectionName)
+        .Get<PrintHubApiOptions>()
+        ?? new PrintHubApiOptions();
+
+    var defaults = PrintHubSettings.CreateDefaults(
+        options.ServiceName,
+        options.Port,
+        options.BindHost,
+        options.ApiKeyHeaderName,
+        options.ApiKey,
+        null,
+        options.StorageDirectory,
+        options.MaxUploadSizeBytes);
+
+    PrintHubSettings startupSettings;
+
+    try
+    {
+        var settingsStore = new JsonPrintHubSettingsStore(appDataPaths.AppDataRootPath, options.SettingsFilePath);
+        var loadedSettings = settingsStore.LoadAsync().AsTask().GetAwaiter().GetResult();
+        startupSettings = loadedSettings?.ApplyDefaults(defaults) ?? defaults;
+    }
+    catch
+    {
+        startupSettings = defaults;
+    }
+
+    builder.WebHost.UseUrls(BuildListenUrl(startupSettings.BindHost, startupSettings.Port));
+}
+
+static string BuildListenUrl(string bindHost, int port) =>
+    $"http://{FormatHostForUrl(bindHost)}:{port}";
+
+static string FormatHostForUrl(string host)
+{
+    if (string.IsNullOrWhiteSpace(host))
+    {
+        return "127.0.0.1";
+    }
+
+    var trimmed = host.Trim();
+
+    if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
+    {
+        return trimmed;
+    }
+
+    if (trimmed.Contains(':')
+        && trimmed is not "*" and not "+"
+        && !trimmed.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+    {
+        return $"[{trimmed}]";
+    }
+
+    return trimmed;
+}
 
 static IPrintBackend ResolvePrintBackend(
     PrintBackendMode mode,

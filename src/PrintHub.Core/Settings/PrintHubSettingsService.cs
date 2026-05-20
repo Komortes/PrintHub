@@ -28,12 +28,7 @@ public sealed class PrintHubSettingsService : IPrintHubSettingsService
 
         try
         {
-            if (_currentSettings is not null)
-            {
-                return _currentSettings;
-            }
-
-            _currentSettings = await _store.LoadAsync(cancellationToken) ?? _defaults;
+            _currentSettings = await EnsureCurrentSettingsAsync(cancellationToken);
             await _store.SaveAsync(_currentSettings, cancellationToken);
             return _currentSettings;
         }
@@ -51,9 +46,9 @@ public sealed class PrintHubSettingsService : IPrintHubSettingsService
 
         try
         {
-            _currentSettings ??= await _store.LoadAsync(cancellationToken) ?? _defaults;
+            _currentSettings = await EnsureCurrentSettingsAsync(cancellationToken);
             // Preserve the printer registry when updating general settings
-            var updated = PrintHubSettings.FromRequest(request) with
+            var updated = PrintHubSettings.FromRequest(request, _currentSettings.BindHost) with
             {
                 Printers = _currentSettings.Printers
             };
@@ -76,7 +71,7 @@ public sealed class PrintHubSettingsService : IPrintHubSettingsService
 
         try
         {
-            _currentSettings ??= await _store.LoadAsync(cancellationToken) ?? _defaults;
+            _currentSettings = await EnsureCurrentSettingsAsync(cancellationToken);
 
             if (_currentSettings.Printers.Any(p =>
                     string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)))
@@ -107,7 +102,7 @@ public sealed class PrintHubSettingsService : IPrintHubSettingsService
 
         try
         {
-            _currentSettings ??= await _store.LoadAsync(cancellationToken) ?? _defaults;
+            _currentSettings = await EnsureCurrentSettingsAsync(cancellationToken);
 
             var remaining = _currentSettings.Printers
                 .Where(p => !string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase))
@@ -139,5 +134,17 @@ public sealed class PrintHubSettingsService : IPrintHubSettingsService
         {
             _gate.Release();
         }
+    }
+
+    private async ValueTask<PrintHubSettings> EnsureCurrentSettingsAsync(CancellationToken cancellationToken)
+    {
+        if (_currentSettings is not null)
+        {
+            return _currentSettings;
+        }
+
+        var loaded = await _store.LoadAsync(cancellationToken);
+        _currentSettings = loaded?.ApplyDefaults(_defaults) ?? _defaults;
+        return _currentSettings;
     }
 }

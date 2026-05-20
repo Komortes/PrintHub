@@ -1169,7 +1169,7 @@
   </div>
   <div class="header-meta">
     <span class="hchip" id="service-chip">PrintHub</span>
-    <span class="hchip" id="port-chip">:5051</span>
+    <span class="hchip" id="port-chip">127.0.0.1:5051</span>
     <span class="hchip" id="storage-chip">data/documents</span>
   </div>
   <div class="header-actions">
@@ -1344,7 +1344,7 @@
   </div>
   <div class="slide-panel-body" id="settings-panel-body">
     <div class="note-box" data-i18n="settings.note">
-      API ключ сохраняется локально в браузере. Для внешних интеграций предпочтителен `Authorization: Bearer &lt;key&gt;`. Изменение порта применяется после перезапуска сервиса.
+      API ключ сохраняется локально в браузере. Для внешних интеграций предпочтителен `Authorization: Bearer &lt;key&gt;`. Изменение host и порта применяется после перезапуска сервиса.
     </div>
 
     <div class="field">
@@ -1367,6 +1367,12 @@
         <label data-i18n="settings.port">Порт</label>
         <input type="number" id="port-input" min="1" max="65535" placeholder="5051">
       </div>
+    </div>
+
+    <div class="field">
+      <label data-i18n="settings.bindHost">Bind host</label>
+      <input type="text" id="bind-host-input" placeholder="127.0.0.1">
+      <p class="helper-text" data-i18n="settings.bindHostHelper">Используйте `127.0.0.1` для локального доступа или `0.0.0.0` для доступа из сети. Изменение host и порта применяется после перезапуска сервиса.</p>
     </div>
 
     <div class="field-row">
@@ -1440,7 +1446,7 @@
 
       <div class="setup-chips">
         <span id="setup-chip-service" class="setup-chip">PrintHub</span>
-        <span id="setup-chip-port" class="setup-chip">:5051</span>
+        <span id="setup-chip-port" class="setup-chip">127.0.0.1:5051</span>
         <span id="setup-chip-printers" class="setup-chip">0 принт.</span>
       </div>
     </div>
@@ -2389,7 +2395,7 @@
     setupStatus    = next;
 
     document.getElementById('setup-chip-service').textContent = settings.serviceName || 'PrintHub';
-    document.getElementById('setup-chip-port').textContent    = `:${settings.port || 5051}`;
+    document.getElementById('setup-chip-port').textContent    = formatListenAddress(settings);
     document.getElementById('setup-chip-printers').textContent = t('printers.countShort', { count: printers.length });
 
     setSetupStep('setup-step-api', next.hasApiKey,
@@ -3055,6 +3061,7 @@
     return {
       serviceName: 'PrintHub',
       port: 5051,
+      bindHost: '127.0.0.1',
       apiKeyHeaderName: 'X-PrintHub-Api-Key',
       apiKey: apiKey || null,
       defaultPrinterName: null,
@@ -3071,6 +3078,8 @@
     if (serviceEl) serviceEl.value = next.serviceName || 'PrintHub';
     const portEl = document.getElementById('port-input');
     if (portEl) portEl.value = next.port || 5051;
+    const bindHostEl = document.getElementById('bind-host-input');
+    if (bindHostEl) bindHostEl.value = next.bindHost || '127.0.0.1';
     const headerEl = document.getElementById('api-key-header-input');
     if (headerEl) headerEl.value = next.apiKeyHeaderName || 'X-PrintHub-Api-Key';
     const storageEl = document.getElementById('storage-directory-input');
@@ -3084,6 +3093,7 @@
     return {
       serviceName:      document.getElementById('service-name-input').value.trim()    || fallback.serviceName,
       port:             parseInt(document.getElementById('port-input').value, 10)     || fallback.port,
+      bindHost:         document.getElementById('bind-host-input').value.trim()       || fallback.bindHost,
       apiKeyHeaderName: document.getElementById('api-key-header-input').value.trim()  || fallback.apiKeyHeaderName,
       apiKey:           document.getElementById('api-key-input').value.trim()         || null,
       defaultPrinterName: fallback.defaultPrinterName || null,
@@ -3097,12 +3107,19 @@
     const serviceChip = document.getElementById('service-chip');
     if (serviceChip) serviceChip.textContent = next.serviceName || 'PrintHub';
     const portChip = document.getElementById('port-chip');
-    if (portChip) portChip.textContent = `:${next.port || 5051}`;
+    if (portChip) portChip.textContent = formatListenAddress(next);
     const storageChip = document.getElementById('storage-chip');
     if (storageChip) storageChip.textContent = next.storageDirectory || 'data/documents';
     const uploadHint = document.getElementById('upload-hint');
     if (uploadHint) uploadHint.textContent =
       t('upload.limitHint', { size: formatBytes(next.maxUploadSizeBytes || 10485760) });
+  }
+
+  function formatListenAddress(settings) {
+    const next = settings || fallbackSettings();
+    const host = next.bindHost || '127.0.0.1';
+    const port = next.port || 5051;
+    return `${host}:${port}`;
   }
 
   function updateAutoStartSummary(status) {

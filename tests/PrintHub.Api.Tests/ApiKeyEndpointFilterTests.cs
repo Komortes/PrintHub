@@ -60,6 +60,7 @@ public sealed class ApiKeyEndpointFilterTests
             PrintHubSettings.CreateDefaults(
                 "PrintHub.Test",
                 5051,
+                "127.0.0.1",
                 "X-PrintHub-Api-Key",
                 "test-api-key",
                 null,

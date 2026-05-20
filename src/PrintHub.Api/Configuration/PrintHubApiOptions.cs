@@ -1,3 +1,5 @@
+using PrintHub.Core.Settings;
+
 namespace PrintHub.Api.Configuration;
 
 public sealed class PrintHubApiOptions
@@ -10,6 +12,7 @@ public sealed class PrintHubApiOptions
     public const string DefaultJobsFilePath = "data/jobs.db";
     public const string DefaultStorageDirectory = "data/documents";
     public const int DefaultPort = 5051;
+    public const string DefaultBindHost = PrintHubSettings.DefaultBindHost;
     public const PrintBackendMode DefaultBackendMode = PrintBackendMode.Auto;
 
     public string ServiceName { get; set; } = "PrintHub";
@@ -29,6 +32,8 @@ public sealed class PrintHubApiOptions
     public string StorageDirectory { get; set; } = DefaultStorageDirectory;
 
     public int Port { get; set; } = DefaultPort;
+
+    public string BindHost { get; set; } = DefaultBindHost;
 
     public PrintBackendMode BackendMode { get; set; } = DefaultBackendMode;
 

@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_EXE="$SCRIPT_DIR/PrintHub.Api"
 APP_DLL="$SCRIPT_DIR/PrintHub.Api.dll"
 DEFAULT_PORT="5051"
+DEFAULT_BIND_HOST="127.0.0.1"
 START_TIMEOUT_SECONDS="${PRINTHUB_START_TIMEOUT_SECONDS:-30}"
 OPEN_BROWSER="${PRINTHUB_OPEN_BROWSER:-true}"
 OPEN_URL_SUFFIX="${PRINTHUB_OPEN_URL_SUFFIX:-}"
@@ -28,6 +29,21 @@ ensure_home() {
   mkdir -p "$PRINTHUB_HOME/runtime"
 }
 
+read_settings_string() {
+  local key="$1"
+  local settings_file="$PRINTHUB_HOME/data/settings.json"
+  local line
+
+  if [[ ! -f "$settings_file" ]]; then
+    return
+  fi
+
+  line="$(grep -E "\"$key\"" "$settings_file" | head -n 1 || true)"
+  if [[ "$line" =~ \"$key\"[[:space:]]*:[[:space:]]*\"([^\"]*)\" ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+  fi
+}
+
 resolve_port() {
   if [[ -n "${PRINTHUB_PORT:-}" ]]; then
     printf '%s\n' "$PRINTHUB_PORT"
@@ -35,8 +51,9 @@ resolve_port() {
   fi
 
   local settings_file="$PRINTHUB_HOME/data/settings.json"
+  local line
+
   if [[ -f "$settings_file" ]]; then
-    local line
     line="$(grep -E '"port"' "$settings_file" | head -n 1 || true)"
     if [[ "$line" =~ ([0-9]{1,5}) ]]; then
       printf '%s\n' "${BASH_REMATCH[1]}"
@@ -47,20 +64,87 @@ resolve_port() {
   printf '%s\n' "$DEFAULT_PORT"
 }
 
-resolve_url() {
+resolve_bind_host() {
+  if [[ -n "${PRINTHUB_HOST:-}" ]]; then
+    printf '%s\n' "$PRINTHUB_HOST"
+    return
+  fi
+
+  local saved_bind_host
+  saved_bind_host="$(read_settings_string "bindHost")"
+  if [[ -n "$saved_bind_host" ]]; then
+    printf '%s\n' "$saved_bind_host"
+    return
+  fi
+
+  printf '%s\n' "$DEFAULT_BIND_HOST"
+}
+
+format_host_for_url() {
+  local host="$1"
+
+  if [[ "$host" == \[*\] ]]; then
+    printf '%s\n' "$host"
+    return
+  fi
+
+  if [[ "$host" == *:* && "$host" != "*" && "$host" != "+" && "$host" != "localhost" ]]; then
+    printf '[%s]\n' "$host"
+    return
+  fi
+
+  printf '%s\n' "$host"
+}
+
+resolve_listen_url() {
   if [[ -n "${PRINTHUB_URL:-}" ]]; then
     printf '%s\n' "$PRINTHUB_URL"
     return
   fi
 
   local host port
-  host="${PRINTHUB_HOST:-127.0.0.1}"
+  host="$(resolve_bind_host)"
   port="$(resolve_port)"
-  printf 'http://%s:%s\n' "$host" "$port"
+  printf 'http://%s:%s\n' "$(format_host_for_url "$host")" "$port"
+}
+
+resolve_access_host() {
+  local bind_host="$1"
+
+  case "$bind_host" in
+    0.0.0.0|"*"|"+")
+      printf '127.0.0.1\n'
+      ;;
+    ::|[::])
+      printf '::1\n'
+      ;;
+    *)
+      printf '%s\n' "$bind_host"
+      ;;
+  esac
+}
+
+resolve_access_url() {
+  if [[ -n "${PRINTHUB_ACCESS_URL:-}" ]]; then
+    printf '%s\n' "$PRINTHUB_ACCESS_URL"
+    return
+  fi
+
+  if [[ -n "${PRINTHUB_URL:-}" ]]; then
+    printf '%s\n' "$PRINTHUB_URL"
+    return
+  fi
+
+  local host port
+  host="$(resolve_access_host "$(resolve_bind_host)")"
+  port="$(resolve_port)"
+  printf 'http://%s:%s\n' "$(format_host_for_url "$host")" "$port"
 }
 
 resolve_port_from_url() {
-  if [[ "$APP_URL" =~ :([0-9]{1,5})$ ]]; then
+  local url="$1"
+
+  if [[ "$url" =~ :([0-9]{1,5})$ ]]; then
     printf '%s\n' "${BASH_REMATCH[1]}"
     return
   fi
@@ -97,7 +181,7 @@ is_healthy() {
     return 1
   fi
 
-  curl -fsS "$APP_URL/health" >/dev/null 2>&1
+  curl -fsS "$ACCESS_URL/health" >/dev/null 2>&1
 }
 
 wait_for_health() {
@@ -125,7 +209,7 @@ open_browser() {
     return
   fi
 
-  local target_url="$APP_URL$OPEN_URL_SUFFIX"
+  local target_url="$ACCESS_URL$OPEN_URL_SUFFIX"
 
   if command -v open >/dev/null 2>&1; then
     open "$target_url" >/dev/null 2>&1 &
@@ -142,10 +226,10 @@ start_process() {
   local env_name="${ASPNETCORE_ENVIRONMENT:-Production}"
 
   if [[ -x "$APP_EXE" ]]; then
-    ASPNETCORE_URLS="$APP_URL" ASPNETCORE_ENVIRONMENT="$env_name" PRINTHUB_HOME="$PRINTHUB_HOME" \
+    ASPNETCORE_URLS="$LISTEN_URL" ASPNETCORE_ENVIRONMENT="$env_name" PRINTHUB_HOME="$PRINTHUB_HOME" \
       nohup "$APP_EXE" >>"$launcher_log" 2>&1 &
   elif [[ -f "$APP_DLL" ]]; then
-    ASPNETCORE_URLS="$APP_URL" ASPNETCORE_ENVIRONMENT="$env_name" PRINTHUB_HOME="$PRINTHUB_HOME" \
+    ASPNETCORE_URLS="$LISTEN_URL" ASPNETCORE_ENVIRONMENT="$env_name" PRINTHUB_HOME="$PRINTHUB_HOME" \
       nohup dotnet "$APP_DLL" >>"$launcher_log" 2>&1 &
   else
     echo "PrintHub executable was not found in $SCRIPT_DIR" >&2
@@ -156,12 +240,16 @@ start_process() {
 }
 
 ensure_home
-APP_URL="$(resolve_url)"
-APP_PORT="$(resolve_port_from_url)"
+LISTEN_URL="$(resolve_listen_url)"
+ACCESS_URL="$(resolve_access_url)"
+APP_PORT="$(resolve_port_from_url "$LISTEN_URL")"
 PID_FILE="$PRINTHUB_HOME/runtime/printhub.pid"
 
 if is_healthy; then
-  echo "PrintHub is already running at $APP_URL"
+  echo "PrintHub is already running at $ACCESS_URL"
+  if [[ "$LISTEN_URL" != "$ACCESS_URL" ]]; then
+    echo "Listening on $LISTEN_URL"
+  fi
   open_browser
   exit 0
 fi
@@ -171,7 +259,10 @@ if [[ -f "$PID_FILE" ]]; then
   if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" >/dev/null 2>&1; then
     echo "Existing PrintHub process found ($existing_pid). Waiting for health endpoint..."
     if wait_for_health; then
-      echo "PrintHub is available at $APP_URL"
+      echo "PrintHub is available at $ACCESS_URL"
+      if [[ "$LISTEN_URL" != "$ACCESS_URL" ]]; then
+        echo "Listening on $LISTEN_URL"
+      fi
       open_browser
       exit 0
     fi
@@ -183,14 +274,17 @@ fi
 start_process
 
 if ! wait_for_health; then
-  echo "PrintHub started but did not become healthy at $APP_URL within ${START_TIMEOUT_SECONDS}s." >&2
+  echo "PrintHub started but did not become healthy at $ACCESS_URL within ${START_TIMEOUT_SECONDS}s." >&2
   echo "Check launcher log: $PRINTHUB_HOME/runtime/launcher.log" >&2
   exit 1
 fi
 
 refresh_pid_file || true
 
-echo "PrintHub is running at $APP_URL"
+echo "PrintHub is running at $ACCESS_URL"
+if [[ "$LISTEN_URL" != "$ACCESS_URL" ]]; then
+  echo "Listening on $LISTEN_URL"
+fi
 echo "PID file: $PID_FILE"
 echo "Runtime home: $PRINTHUB_HOME"
 

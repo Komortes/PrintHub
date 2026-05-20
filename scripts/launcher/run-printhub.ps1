@@ -9,6 +9,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppExe = Join-Path $ScriptDir "PrintHub.Api.exe"
 $AppDll = Join-Path $ScriptDir "PrintHub.Api.dll"
 $DefaultPort = 5051
+$DefaultBindHost = "127.0.0.1"
 $StartTimeoutSeconds = if ($env:PRINTHUB_START_TIMEOUT_SECONDS) { [int]$env:PRINTHUB_START_TIMEOUT_SECONDS } else { 30 }
 
 function Resolve-PrintHubHome {
@@ -24,34 +25,95 @@ function Resolve-PrintHubPort {
         return [int]$env:PRINTHUB_PORT
     }
 
-    $settingsFile = Join-Path $env:PRINTHUB_HOME "data/settings.json"
-    if (Test-Path $settingsFile) {
-        try {
-            $settings = Get-Content $settingsFile -Raw | ConvertFrom-Json
-            if ($settings.port) {
-                return [int]$settings.port
-            }
-        }
-        catch {
-        }
+    $settings = Get-PrintHubSettings
+    if ($settings -and $settings.port) {
+        return [int]$settings.port
     }
 
     return $DefaultPort
 }
 
-function Resolve-PrintHubUrl {
+function Get-PrintHubSettings {
+    $settingsFile = Join-Path $env:PRINTHUB_HOME "data/settings.json"
+    if (-not (Test-Path $settingsFile)) {
+        return $null
+    }
+
+    try {
+        return Get-Content $settingsFile -Raw | ConvertFrom-Json
+    }
+    catch {
+        return $null
+    }
+}
+
+function Resolve-PrintHubBindHost {
+    if (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_HOST)) {
+        return $env:PRINTHUB_HOST
+    }
+
+    $settings = Get-PrintHubSettings
+    if ($settings -and -not [string]::IsNullOrWhiteSpace($settings.bindHost)) {
+        return [string]$settings.bindHost
+    }
+
+    return $DefaultBindHost
+}
+
+function Format-UrlHost([string]$HostName) {
+    if ([string]::IsNullOrWhiteSpace($HostName)) {
+        return $DefaultBindHost
+    }
+
+    if ($HostName.StartsWith("[") -and $HostName.EndsWith("]")) {
+        return $HostName
+    }
+
+    if ($HostName.Contains(":") -and $HostName -ne "*" -and $HostName -ne "+" -and $HostName -ne "localhost") {
+        return "[$HostName]"
+    }
+
+    return $HostName
+}
+
+function Resolve-AccessHost([string]$BindHost) {
+    switch ($BindHost) {
+        "0.0.0.0" { return "127.0.0.1" }
+        "*" { return "127.0.0.1" }
+        "+" { return "127.0.0.1" }
+        "::" { return "::1" }
+        "[::]" { return "::1" }
+        default { return $BindHost }
+    }
+}
+
+function Resolve-PrintHubListenUrl {
     if (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_URL)) {
         return $env:PRINTHUB_URL
     }
 
-    $hostName = if ($env:PRINTHUB_HOST) { $env:PRINTHUB_HOST } else { "127.0.0.1" }
+    $hostName = Format-UrlHost (Resolve-PrintHubBindHost)
+    $port = Resolve-PrintHubPort
+    return "http://$hostName`:$port"
+}
+
+function Resolve-PrintHubAccessUrl {
+    if (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_ACCESS_URL)) {
+        return $env:PRINTHUB_ACCESS_URL
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:PRINTHUB_URL)) {
+        return $env:PRINTHUB_URL
+    }
+
+    $hostName = Format-UrlHost (Resolve-AccessHost (Resolve-PrintHubBindHost))
     $port = Resolve-PrintHubPort
     return "http://$hostName`:$port"
 }
 
 function Test-PrintHubHealth {
     try {
-        Invoke-RestMethod -Uri "$script:AppUrl/health" -Method Get -TimeoutSec 2 | Out-Null
+        Invoke-RestMethod -Uri "$script:AccessUrl/health" -Method Get -TimeoutSec 2 | Out-Null
         return $true
     }
     catch {
@@ -88,7 +150,7 @@ function Open-PrintHubBrowser {
         ""
     }
 
-    Start-Process "$script:AppUrl$suffix" | Out-Null
+    Start-Process "$script:AccessUrl$suffix" | Out-Null
 }
 
 $env:PRINTHUB_HOME = Resolve-PrintHubHome
@@ -97,15 +159,19 @@ $null = New-Item -ItemType Directory -Force -Path $RuntimeDir
 $PidFile = Join-Path $RuntimeDir "printhub.pid"
 $StdOutLog = Join-Path $RuntimeDir "launcher.stdout.log"
 $StdErrLog = Join-Path $RuntimeDir "launcher.stderr.log"
-$script:AppUrl = Resolve-PrintHubUrl
-$env:ASPNETCORE_URLS = $script:AppUrl
+$script:ListenUrl = Resolve-PrintHubListenUrl
+$script:AccessUrl = Resolve-PrintHubAccessUrl
+$env:ASPNETCORE_URLS = $script:ListenUrl
 
 if ([string]::IsNullOrWhiteSpace($env:ASPNETCORE_ENVIRONMENT)) {
     $env:ASPNETCORE_ENVIRONMENT = "Production"
 }
 
 if (Test-PrintHubHealth) {
-    Write-Host "PrintHub is already running at $script:AppUrl"
+    Write-Host "PrintHub is already running at $script:AccessUrl"
+    if ($script:ListenUrl -ne $script:AccessUrl) {
+        Write-Host "Listening on $script:ListenUrl"
+    }
     Open-PrintHubBrowser
     exit 0
 }
@@ -117,7 +183,10 @@ if (Test-Path $PidFile) {
         if ($existingProcess) {
             Write-Host "Existing PrintHub process found ($existingPid). Waiting for health endpoint..."
             if (Wait-ForPrintHubHealth) {
-                Write-Host "PrintHub is available at $script:AppUrl"
+                Write-Host "PrintHub is available at $script:AccessUrl"
+                if ($script:ListenUrl -ne $script:AccessUrl) {
+                    Write-Host "Listening on $script:ListenUrl"
+                }
                 Open-PrintHubBrowser
                 exit 0
             }
@@ -151,10 +220,13 @@ else {
 $process.Id | Set-Content $PidFile
 
 if (-not (Wait-ForPrintHubHealth)) {
-    throw "PrintHub started but did not become healthy at $script:AppUrl within $StartTimeoutSeconds seconds. Check $StdOutLog and $StdErrLog."
+    throw "PrintHub started but did not become healthy at $script:AccessUrl within $StartTimeoutSeconds seconds. Check $StdOutLog and $StdErrLog."
 }
 
-Write-Host "PrintHub is running at $script:AppUrl"
+Write-Host "PrintHub is running at $script:AccessUrl"
+if ($script:ListenUrl -ne $script:AccessUrl) {
+    Write-Host "Listening on $script:ListenUrl"
+}
 Write-Host "PID file: $PidFile"
 Write-Host "Runtime home: $env:PRINTHUB_HOME"
 
