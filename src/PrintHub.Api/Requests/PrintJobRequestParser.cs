@@ -97,6 +97,8 @@ public static class PrintJobRequestParser
             : int.TryParse(copiesRaw, out var parsedCopies)
                 ? parsedCopies
                 : throw new InvalidDataException("Form field 'copies' must be a valid integer.");
+        var orientationOverride = ParseOrientationOverride(
+            GetSingleValue(form, "orientationOverride"));
 
         await using var stream = file.OpenReadStream();
         using var memoryStream = new MemoryStream();
@@ -110,7 +112,10 @@ public static class PrintJobRequestParser
                 PrintDocumentFormat.Pdf,
                 Url: null,
                 Data: Convert.ToBase64String(memoryStream.ToArray()),
-                FileName: file.FileName));
+                FileName: file.FileName)
+            {
+                OrientationOverride = orientationOverride
+            });
     }
 
     private static bool IsJsonRequest(HttpRequest request) =>
@@ -123,6 +128,20 @@ public static class PrintJobRequestParser
     private static bool IsPdf(string? fileName) =>
         !string.IsNullOrWhiteSpace(fileName)
         && fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
+    private static PrintDocumentOrientationOverride ParseOrientationOverride(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return PrintDocumentOrientationOverride.Auto;
+        }
+
+        return Enum.TryParse<PrintDocumentOrientationOverride>(value, ignoreCase: true, out var parsedValue)
+            && Enum.IsDefined(parsedValue)
+                ? parsedValue
+                : throw new InvalidDataException(
+                    "Form field 'orientationOverride' must be one of: auto, portrait, landscape.");
+    }
 
     private static bool HasProperty(JsonElement element, string propertyName)
     {

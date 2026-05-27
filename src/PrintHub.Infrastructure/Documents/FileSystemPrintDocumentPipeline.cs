@@ -43,6 +43,11 @@ public sealed class FileSystemPrintDocumentPipeline : IPrintDocumentPipeline
             throw new InvalidDataException("Only PDF documents are supported in the current version.");
         }
 
+        if (!Enum.IsDefined(request.OrientationOverride))
+        {
+            throw new InvalidDataException("Document orientation override is not supported.");
+        }
+
         var settings = await _settingsService.GetAsync(cancellationToken);
         var fileName = ResolveFileName(request);
         var storageDirectory = ResolveStorageDirectory(settings.StorageDirectory);
@@ -66,6 +71,10 @@ public sealed class FileSystemPrintDocumentPipeline : IPrintDocumentPipeline
             };
 
             await EnsurePdfAsync(storedPath, cancellationToken);
+            await PdfOrientationOverrideTransformer.ApplyAsync(
+                storedPath,
+                request.OrientationOverride,
+                cancellationToken);
 
             return PrintDocument.CreateStored(
                 request.Type,

@@ -12,6 +12,15 @@ public sealed class WindowsPrintBackend : IPrintBackend
 {
     private const string WindowsPowerShellCommandName = "powershell";
     private const string PowerShellCoreCommandName = "pwsh";
+    private const string PdfToPrinterExecutableName = "PDFtoPrinter.exe";
+    private const string PdfToPrinterPathEnvironmentVariableName = "PRINTHUB_PDFTOPRINTER_PATH";
+
+    private readonly string _applicationDirectory;
+
+    public WindowsPrintBackend(string? applicationDirectory = null)
+    {
+        _applicationDirectory = Path.GetFullPath(applicationDirectory ?? AppContext.BaseDirectory);
+    }
 
     public static bool IsSupported() =>
         OperatingSystem.IsWindows() && ResolvePowerShellCommandName() is not null;
@@ -155,6 +164,7 @@ public sealed class WindowsPrintBackend : IPrintBackend
             };
 
             var recommendations = new List<string>();
+            var pdfToPrinterPath = ResolvePdfToPrinterPath();
 
             if (diagnosticsPrinters.Length == 0)
             {
@@ -166,7 +176,27 @@ public sealed class WindowsPrintBackend : IPrintBackend
                 recommendations.Add("Set a default printer if you want to print without sending printerName.");
             }
 
-            recommendations.Add("Make sure a PDF viewer with shell print support is installed for Windows PDF printing.");
+            if (pdfToPrinterPath is null)
+            {
+                recommendations.Add(
+                    "Place PDFtoPrinter.exe next to PrintHub.Api.exe or set PRINTHUB_PDFTOPRINTER_PATH for more reliable Windows PDF printing.");
+                recommendations.Add(
+                    "If PDFtoPrinter is not available, install a PDF viewer with shell print support for the shell-print fallback.");
+            }
+            else
+            {
+                recommendations.Add(
+                    "Windows PDF printing will use PDFtoPrinter.exe before falling back to shell printing.");
+            }
+
+            checks.Add(new PrintBackendDiagnosticCheck(
+                "pdf-to-printer",
+                pdfToPrinterPath is null ? DiagnosticSeverity.Warning : DiagnosticSeverity.Info,
+                "PDFtoPrinter",
+                pdfToPrinterPath is null
+                    ? "PDFtoPrinter.exe was not detected. PrintHub will fall back to shell PDF printing."
+                    : "PDFtoPrinter.exe is available for Windows PDF printing.",
+                pdfToPrinterPath));
 
             return new PrintBackendDiagnostics(
                 Backend: "windows-spooler",
@@ -215,6 +245,13 @@ public sealed class WindowsPrintBackend : IPrintBackend
         }
 
         var documentPath = Path.GetFullPath(job.Document.StoredPath);
+        var pdfToPrinterPath = ResolvePdfToPrinterPath();
+
+        if (pdfToPrinterPath is not null)
+        {
+            await RunPdfToPrinterAsync(pdfToPrinterPath, documentPath, job.PrinterName, job.Copies, cancellationToken);
+            return;
+        }
 
         for (var copyIndex = 0; copyIndex < job.Copies; copyIndex++)
         {
@@ -241,9 +278,118 @@ public sealed class WindowsPrintBackend : IPrintBackend
     private static string? ResolvePowerShellCommandName() =>
         IsCommandAvailable(WindowsPowerShellCommandName)
             ? WindowsPowerShellCommandName
-            : IsCommandAvailable(PowerShellCoreCommandName)
-                ? PowerShellCoreCommandName
-                : null;
+                : IsCommandAvailable(PowerShellCoreCommandName)
+                    ? PowerShellCoreCommandName
+                    : null;
+
+    internal string? ResolvePdfToPrinterPath()
+    {
+        var overridePath = Environment.GetEnvironmentVariable(PdfToPrinterPathEnvironmentVariableName);
+
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            var resolvedOverridePath = ResolveExistingPath(overridePath);
+
+            if (resolvedOverridePath is not null)
+            {
+                return resolvedOverridePath;
+            }
+        }
+
+        var bundledPath = Path.Combine(_applicationDirectory, PdfToPrinterExecutableName);
+        if (File.Exists(bundledPath))
+        {
+            return bundledPath;
+        }
+
+        return ResolveCommandPath(PdfToPrinterExecutableName);
+    }
+
+    private static async Task RunPdfToPrinterAsync(
+        string pdfToPrinterPath,
+        string documentPath,
+        string? printerName,
+        int copies,
+        CancellationToken cancellationToken)
+    {
+        var startInfo = CreatePdfToPrinterStartInfo(pdfToPrinterPath, documentPath, printerName, copies);
+
+        using var process = new Process
+        {
+            StartInfo = startInfo
+        };
+
+        process.Start();
+
+        using var cancellationRegistration = cancellationToken.Register(() =>
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+            catch
+            {
+            }
+        });
+
+        var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        var standardOutput = await standardOutputTask;
+        var standardError = await standardErrorTask;
+
+        if (process.ExitCode == 0)
+        {
+            return;
+        }
+
+        var detail = string.IsNullOrWhiteSpace(printerName)
+            ? "using the default printer"
+            : $"for printer '{printerName}'";
+        var error = string.IsNullOrWhiteSpace(standardError) ? standardOutput : standardError;
+
+        throw new InvalidOperationException(
+            $"PDFtoPrinter could not print PDF {detail}. " +
+            $"{(string.IsNullOrWhiteSpace(error) ? $"Process exited with code {process.ExitCode}." : error.Trim())}");
+    }
+
+    internal static ProcessStartInfo CreatePdfToPrinterStartInfo(
+        string pdfToPrinterPath,
+        string documentPath,
+        string? printerName,
+        int copies)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = pdfToPrinterPath,
+            WorkingDirectory = Path.GetDirectoryName(pdfToPrinterPath) ?? AppContext.BaseDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        startInfo.ArgumentList.Add(documentPath);
+
+        if (!string.IsNullOrWhiteSpace(printerName))
+        {
+            startInfo.ArgumentList.Add(printerName.Trim());
+        }
+
+        if (copies > 1)
+        {
+            startInfo.ArgumentList.Add($"copies={copies}");
+        }
+
+        startInfo.ArgumentList.Add("/s");
+
+        return startInfo;
+    }
 
     private static void StartPrintProcess(string documentPath, string? printerName)
     {
@@ -263,8 +409,9 @@ public sealed class WindowsPrintBackend : IPrintBackend
                 : $"for printer '{printerName}'";
 
             throw new InvalidOperationException(
-                $"The Windows print backend could not start PDF printing {detail}. " +
-                "Make sure a PDF viewer with shell print support is installed.",
+                $"The Windows print backend could not start shell PDF printing {detail}. " +
+                "PDFtoPrinter.exe was not detected, and the shell-print fallback could not start. " +
+                "Install a PDF viewer with shell print support or provide PDFtoPrinter.exe.",
                 exception);
         }
     }
@@ -348,24 +495,44 @@ public sealed class WindowsPrintBackend : IPrintBackend
     }
 
     private static bool IsCommandAvailable(string commandName)
+        => ResolveCommandPath(commandName) is not null;
+
+    private static string? ResolveCommandPath(string commandName)
     {
         var path = Environment.GetEnvironmentVariable("PATH");
 
         if (string.IsNullOrWhiteSpace(path))
         {
-            return false;
+            return null;
         }
 
         foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            if (File.Exists(Path.Combine(directory, commandName))
-                || File.Exists(Path.Combine(directory, $"{commandName}.exe")))
+            var candidate = ResolveExistingPath(Path.Combine(directory, commandName))
+                ?? ResolveExistingPath(Path.Combine(directory, $"{commandName}.exe"));
+
+            if (candidate is not null)
             {
-                return true;
+                return candidate;
             }
         }
 
-        return false;
+        return null;
+    }
+
+    private static string? ResolveExistingPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        var trimmedPath = path.Trim();
+        var fullPath = Path.IsPathRooted(trimmedPath)
+            ? Path.GetFullPath(trimmedPath)
+            : Path.GetFullPath(trimmedPath);
+
+        return File.Exists(fullPath) ? fullPath : null;
     }
 
     private static string QuoteShellArgument(string value) =>

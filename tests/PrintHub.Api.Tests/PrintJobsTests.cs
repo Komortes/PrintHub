@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
 using PrintHub.Api.Tests.Infrastructure;
 using PrintHub.Contracts.PrintJobs;
 
@@ -60,6 +62,67 @@ public sealed class PrintJobsTests
 
         var storedFiles = Directory.GetFiles(Path.Combine(factory.TempRootPath, "documents"));
         Assert.Single(storedFiles);
+    }
+
+    [Fact]
+    public async Task CreatePrintJob_PortraitOrientationOverride_RotatesStoredPdfToPortrait()
+    {
+        using var factory = new PrintHubApiFactory();
+        using var client = factory.CreateClient();
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, "/print-jobs")
+        {
+            Content = JsonContent.Create(
+                new CreatePrintJobRequest(
+                    PrinterName: "Office Printer",
+                    Copies: 1,
+                    Document: new PrintDocumentRequest(
+                        DocumentSourceType.Base64,
+                        PrintDocumentFormat.Pdf,
+                        Url: null,
+                        Data: CreatePdfBase64(200, 100),
+                        FileName: "portrait-override.pdf")
+                    {
+                        OrientationOverride = PrintDocumentOrientationOverride.Portrait
+                    }),
+                options: TestJson.SerializerOptions)
+        };
+        createRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var createResponse = await client.SendAsync(createRequest);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var createdJob = await createResponse.Content.ReadFromJsonAsync<CreatePrintJobResponse>(TestJson.SerializerOptions);
+
+        Assert.NotNull(createdJob);
+
+        var completedJob = await WaitForCompletionAsync(client, createdJob!.JobId);
+
+        Assert.Equal(PrintJobStatus.Completed, completedJob.Status);
+
+        using var detailsRequest = new HttpRequestMessage(HttpMethod.Get, $"/print-jobs/{createdJob.JobId}/details");
+        detailsRequest.Headers.Add(ApiKeyHeaderName, ApiKey);
+
+        var detailsResponse = await client.SendAsync(detailsRequest);
+        detailsResponse.EnsureSuccessStatusCode();
+
+        var details = await detailsResponse.Content.ReadFromJsonAsync<PrintJobDetailsDto>(TestJson.SerializerOptions);
+
+        Assert.NotNull(details);
+        Assert.True(File.Exists(details!.Document.StoredPath));
+
+        using var document = PdfReader.Open(details.Document.StoredPath, PdfDocumentOpenMode.Import);
+        var page = document.Pages[0];
+        var rotation = NormalizeRotation(page.Rotate);
+        var width = page.Width.Point;
+        var height = page.Height.Point;
+
+        if (rotation is 90 or 270)
+        {
+            (width, height) = (height, width);
+        }
+
+        Assert.True(height > width);
     }
 
     [Fact]
@@ -719,5 +782,29 @@ public sealed class PrintJobsTests
 
         Assert.NotNull(createdJob);
         return createdJob!;
+    }
+
+    private static string CreatePdfBase64(double widthPoints, double heightPoints)
+    {
+        using var document = new PdfDocument();
+        var page = document.AddPage();
+        page.Width = PdfSharp.Drawing.XUnit.FromPoint(widthPoints);
+        page.Height = PdfSharp.Drawing.XUnit.FromPoint(heightPoints);
+
+        using var stream = new MemoryStream();
+        document.Save(stream, false);
+        return Convert.ToBase64String(stream.ToArray());
+    }
+
+    private static int NormalizeRotation(int rotation)
+    {
+        var normalizedRotation = rotation % 360;
+
+        if (normalizedRotation < 0)
+        {
+            normalizedRotation += 360;
+        }
+
+        return normalizedRotation;
     }
 }

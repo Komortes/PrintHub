@@ -5,4 +5,8 @@ public sealed record PrintDocumentRequest(
     PrintDocumentFormat Format,
     string? Url,
     string? Data,
-    string? FileName);
+    string? FileName)
+{
+    public PrintDocumentOrientationOverride OrientationOverride { get; init; } =
+        PrintDocumentOrientationOverride.Auto;
+}

@@ -144,11 +144,14 @@ X-PrintHub-Api-Key: {{ApiKey}}
 
 {
   "printerName": "Office Printer",
+  "copies": 1,
   "document": {
     "type": "url",
+    "format": "pdf",
     "url": "https://example.com/file.pdf",
     "data": null,
-    "fileName": "file.pdf"
+    "fileName": "file.pdf",
+    "orientationOverride": "portrait"
   }
 }
 

@@ -832,7 +832,10 @@ static CreatePrintJobRequest CreateTestPrintJobRequest(string printerName) =>
             PrintDocumentFormat.Pdf,
             Url: null,
             Data: TestPrintDocumentBase64,
-            FileName: "print-hub-test-page.pdf"));
+            FileName: "print-hub-test-page.pdf")
+        {
+            OrientationOverride = PrintDocumentOrientationOverride.Auto
+        });
 
 static void ConfigureStartupUrls(WebApplicationBuilder builder, PrintHubAppDataPaths appDataPaths)
 {

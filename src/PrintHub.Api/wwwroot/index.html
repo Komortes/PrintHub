@@ -1327,6 +1327,14 @@
         <label data-i18n="fields.copies">Копий</label>
         <input type="number" id="copies-input" value="1" min="1" max="99">
       </div>
+      <div class="field">
+        <label data-i18n="fields.orientationOverride">Ориентация</label>
+        <select id="orientation-override-select">
+          <option value="auto" data-i18n="orientation.auto">Авто</option>
+          <option value="portrait" data-i18n="orientation.portrait">Вертикально</option>
+          <option value="landscape" data-i18n="orientation.landscape">Горизонтально</option>
+        </select>
+      </div>
     </div>
     <p class="helper-text" id="job-target-hint" style="margin-bottom:12px;" data-i18n="job.targetDefault">Если принтер не выбран, задание пойдёт на системный принтер по умолчанию.</p>
 
@@ -2962,6 +2970,7 @@
     const button  = document.getElementById('print-btn');
     const printer = document.getElementById('printer-select').value || null;
     const copies  = parseInt(document.getElementById('copies-input').value, 10) || 1;
+    const orientationOverride = document.getElementById('orientation-override-select').value || 'auto';
 
     if (activeTab === 'upload' && !selectedFile) { showToast(t('validation.selectPdf'), true); return; }
     if (activeTab === 'url' && !document.getElementById('url-input').value.trim()) { showToast(t('validation.enterPdfUrl'), true); return; }
@@ -2975,6 +2984,7 @@
         form.append('file', selectedFile);
         if (printer) form.append('printerName', printer);
         form.append('copies', copies);
+        if (orientationOverride !== 'auto') form.append('orientationOverride', orientationOverride);
         response = await fetch('/print-jobs', {
           method: 'POST',
           headers: authHeaders(resolveRequestApiKey()),
@@ -2987,7 +2997,12 @@
           body: JSON.stringify({
             printerName: printer,
             copies,
-            document: { type: 'url', format: 'pdf', url: document.getElementById('url-input').value.trim() }
+            document: {
+              type: 'url',
+              format: 'pdf',
+              url: document.getElementById('url-input').value.trim(),
+              orientationOverride
+            }
           })
         });
       } else {
@@ -3001,7 +3016,8 @@
               type: 'base64',
               format: 'pdf',
               data: document.getElementById('base64-input').value.trim(),
-              fileName: document.getElementById('base64-name-input').value.trim() || 'document.pdf'
+              fileName: document.getElementById('base64-name-input').value.trim() || 'document.pdf',
+              orientationOverride
             }
           })
         });
@@ -3032,6 +3048,7 @@
     document.getElementById('base64-input').value = '';
     document.getElementById('base64-name-input').value = '';
     document.getElementById('copies-input').value = '1';
+    document.getElementById('orientation-override-select').value = 'auto';
   }
 
   function handleFileSelect(event) {
