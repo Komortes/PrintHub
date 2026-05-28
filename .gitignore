@@ -5,3 +5,4 @@ obj/
 output/
 docs/superpowers/
 .superpowers/
+.claude/
